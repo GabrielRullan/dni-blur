@@ -293,7 +293,7 @@ function setupControls() {
     });
   });
 
-  // Preset chips
+  // Preset chips (Toggle on click: adds if absent, removes if already active)
   document.querySelectorAll('[data-preset]').forEach(btn => {
     btn.addEventListener('click', () => {
       const key = btn.dataset.preset;
@@ -303,7 +303,7 @@ function setupControls() {
         alert('Carga primero una imagen o usa una demo para aplicar plantillas.');
         return;
       }
-      addPresetBox(def);
+      togglePresetBox(key, def);
     });
   });
 
@@ -322,10 +322,26 @@ function setupControls() {
       alert('Carga primero una imagen de DNI.');
       return;
     }
-    // Add Signature, CAN and Support #
-    ['soporte', 'firma', 'can'].forEach(k => {
-      if (PRESETS[k]) addPresetBox(PRESETS[k]);
-    });
+    // Check if all recommended are already active; if so, toggle them off
+    const recKeys = ['soporte', 'firma', 'can'];
+    const allActive = recKeys.every(k => state.boxes.some(b => b.presetKey === k));
+    
+    if (allActive) {
+      // Remove all recommended
+      state.boxes = state.boxes.filter(b => !recKeys.includes(b.presetKey));
+      state.selectedBoxId = null;
+      btnDeleteSelected.disabled = true;
+    } else {
+      // Add missing ones
+      recKeys.forEach(k => {
+        if (!state.boxes.some(b => b.presetKey === k) && PRESETS[k]) {
+          addPresetBox(PRESETS[k], k);
+        }
+      });
+    }
+    updateBoxBadge();
+    syncPresetButtonsState();
+    render();
   };
 
   btnRecommendAEPD.addEventListener('click', applyRecommended);
@@ -350,6 +366,7 @@ function setupControls() {
       state.selectedBoxId = null;
       btnDeleteSelected.disabled = true;
       updateBoxBadge();
+      syncPresetButtonsState();
       render();
     }
   });
@@ -481,7 +498,52 @@ function updateBoxBadge() {
 }
 
 // Add preset box applying calibration transformation if available
-function addPresetBox(def) {
+// Sync the visual active state of preset buttons with current boxes
+function syncPresetButtonsState() {
+  document.querySelectorAll('[data-preset]').forEach(btn => {
+    const key = btn.dataset.preset;
+    const isPresent = state.boxes.some(b => b.presetKey === key);
+    if (isPresent) {
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+    }
+  });
+
+  // Also check if AEPD button is active
+  if (btnRecommendAEPD) {
+    const recKeys = ['soporte', 'firma', 'can'];
+    const allActive = recKeys.every(k => state.boxes.some(b => b.presetKey === k));
+    if (allActive) {
+      btnRecommendAEPD.classList.add('active');
+    } else {
+      btnRecommendAEPD.classList.remove('active');
+    }
+  }
+}
+
+// Toggle preset box: if already present, removes it; otherwise adds it
+function togglePresetBox(key, def) {
+  const existingIndex = state.boxes.findIndex(b => b.presetKey === key);
+  if (existingIndex !== -1) {
+    // Remove it
+    const removed = state.boxes.splice(existingIndex, 1)[0];
+    if (state.selectedBoxId === removed.id) {
+      state.selectedBoxId = null;
+      btnDeleteSelected.disabled = true;
+    }
+    updateBoxBadge();
+    syncPresetButtonsState();
+    render();
+    return;
+  }
+
+  // Otherwise, add it
+  addPresetBox(def, key);
+}
+
+// Add preset box applying calibration transformation if available
+function addPresetBox(def, key = null) {
   const id = 'box_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4);
   
   let x = def.x;
@@ -503,6 +565,7 @@ function addPresetBox(def) {
 
   state.boxes.push({
     id,
+    presetKey: key,
     x: Math.max(0.005, Math.min(0.98, x)),
     y: Math.max(0.005, Math.min(0.98, y)),
     width: Math.max(0.02, width),
@@ -514,6 +577,7 @@ function addPresetBox(def) {
   state.selectedBoxId = id;
   btnDeleteSelected.disabled = false;
   updateBoxBadge();
+  syncPresetButtonsState();
   render();
 }
 
@@ -523,6 +587,7 @@ function deleteSelectedBox() {
   state.selectedBoxId = null;
   btnDeleteSelected.disabled = true;
   updateBoxBadge();
+  syncPresetButtonsState();
   render();
 }
 
@@ -621,13 +686,13 @@ function loadDemoImage(imagePath, side) {
     // Switch to corresponding tab
     if (side === 'front') {
       presetTabs[0].click();
-      addPresetBox(PRESETS.soporte);
-      addPresetBox(PRESETS.firma);
-      addPresetBox(PRESETS.can);
+      addPresetBox(PRESETS.soporte, 'soporte');
+      addPresetBox(PRESETS.firma, 'firma');
+      addPresetBox(PRESETS.can, 'can');
     } else {
       presetTabs[1].click();
-      addPresetBox(PRESETS.mrz);
-      addPresetBox(PRESETS.domicilio);
+      addPresetBox(PRESETS.mrz, 'mrz');
+      addPresetBox(PRESETS.domicilio, 'domicilio');
     }
     render();
   };

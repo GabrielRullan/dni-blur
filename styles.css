@@ -470,6 +470,19 @@ body {
   color: var(--primary);
 }
 
+.chip-btn.active {
+  background: #eff6ff;
+  border-color: var(--primary);
+  color: var(--primary);
+  font-weight: 650;
+  box-shadow: 0 0 0 1px var(--primary);
+}
+
+.chip-btn.active .chip-label::before {
+  content: "✓ ";
+  font-weight: bold;
+}
+
 .chip-info {
   font-size: 0.7rem;
   opacity: 0.65;
