@@ -7,13 +7,17 @@
 const state = {
   img: null, // HTMLImageElement loaded
   imgOrientation: 0, // 0, 90, 180, 270 degrees
+  
+  // App Mode: 'simple' (default, streamlined, pixelate, no B&W options shown) or 'advanced'
+  appMode: 'simple',
+
   // Boxes: { id, x, y, width, height, label, style: 'pixelate'|'blur'|'blackout' } (stored in 0..1 normalized coordinates)
   boxes: [],
   selectedBoxId: null,
   activeStyle: 'pixelate',
   intensity: 18,
   
-  // B&W options
+  // B&W options (active by default, hidden controls in simple mode)
   bwEnabled: true,
   contrast: 115,
   brightness: 100,
@@ -29,6 +33,15 @@ const state = {
 
   // View state
   showGuides: true,
+  
+  // Calibration State: allows user to click top-left and bottom-right corners of DNI
+  calibration: {
+    active: false,
+    step: 0, // 0: inactive, 1: waiting top-left, 2: waiting bottom-right
+    topLeft: null, // { x: 0..1, y: 0..1 }
+    bottomRight: null // { x: 0..1, y: 0..1 }
+  },
+
   interaction: {
     mode: 'idle', // 'idle' | 'drawing' | 'moving' | 'resizing'
     startX: 0,
@@ -53,14 +66,35 @@ const ctx = canvas.getContext('2d', { willReadFrequently: true });
 const btnRotate = document.getElementById('btn-rotate');
 const btnDemoFront = document.getElementById('btn-demo-front');
 const btnDemoBack = document.getElementById('btn-demo-back');
-const btnEmptyDemo = document.getElementById('btn-empty-demo');
+const btnDemoFrontThumb = document.getElementById('btn-demo-front-thumb');
+const btnDemoBackThumb = document.getElementById('btn-demo-back-thumb');
 const btnClearBoxes = document.getElementById('btn-clear-boxes');
 const btnDeleteSelected = document.getElementById('btn-delete-selected');
 const btnRecommendAEPD = document.getElementById('btn-recommend-aepd');
+const btnModalApplyAEPD = document.getElementById('btn-modal-apply-aepd');
 const btnDownload = document.getElementById('btn-download');
 const btnCopyClipboard = document.getElementById('btn-copy-clipboard');
 const boxCountBadge = document.getElementById('box-count-badge');
 const showGuidesCheckbox = document.getElementById('show-guides');
+
+// Mode toggle
+const btnModeSimple = document.getElementById('btn-mode-simple');
+const btnModeAdvanced = document.getElementById('btn-mode-advanced');
+const advancedElements = document.querySelectorAll('.advanced-only');
+const badgeWm = document.getElementById('badge-wm');
+
+// Calibration elements
+const calibrationBar = document.getElementById('calibration-bar');
+const calibIndicator = document.getElementById('calib-indicator');
+const calibInstruction = document.getElementById('calib-instruction');
+const btnStartCalibration = document.getElementById('btn-start-calibration');
+const btnCancelCalib = document.getElementById('btn-cancel-calib');
+const btnResetCalib = document.getElementById('btn-reset-calib');
+
+// Guide modal
+const guideModal = document.getElementById('guide-modal');
+const btnOpenGuide = document.getElementById('btn-open-guide');
+const btnCloseGuide = document.getElementById('btn-close-guide');
 
 // Sliders & value badges
 const redactIntensity = document.getElementById('redact-intensity');
@@ -99,29 +133,52 @@ if (currentDatePreview) {
   currentDatePreview.textContent = todayStr;
 }
 
-// Preset definitions (Normalized bounding boxes 0..1 based on standard Spanish DNI 3.0 / 4.0 layout)
+// Preset definitions (Normalized 0..1 bounding boxes based on standard Spanish DNI 3.0 / 4.0 layout)
 const PRESETS = {
-  // Front of DNI
-  firma: { x: 0.28, y: 0.68, width: 0.32, height: 0.19, label: 'Firma' },
-  can: { x: 0.81, y: 0.83, width: 0.16, height: 0.12, label: 'Código CAN' },
-  soporte: { x: 0.65, y: 0.11, width: 0.30, height: 0.11, label: 'Nº Soporte' },
-  validez: { x: 0.50, y: 0.55, width: 0.26, height: 0.11, label: 'Validez' },
-  nacimiento: { x: 0.50, y: 0.44, width: 0.26, height: 0.09, label: 'Fecha Nac.' },
-  foto_extra: { x: 0.80, y: 0.54, width: 0.16, height: 0.24, label: 'Foto sec.' },
+  // Front of DNI (Reino de España Specimen layout)
+  firma: { x: 0.43, y: 0.74, width: 0.31, height: 0.16, label: 'Firma' },
+  can: { x: 0.75, y: 0.79, width: 0.22, height: 0.13, label: 'Código CAN' },
+  soporte: { x: 0.39, y: 0.65, width: 0.25, height: 0.10, label: 'Nº Soporte' },
+  validez: { x: 0.57, y: 0.57, width: 0.19, height: 0.08, label: 'Validez' },
+  nacimiento: { x: 0.77, y: 0.48, width: 0.19, height: 0.08, label: 'Fecha Nac.' },
+  foto_extra: { x: 0.81, y: 0.58, width: 0.15, height: 0.20, label: 'Foto sec.' },
   
   // Back of DNI
-  mrz: { x: 0.03, y: 0.64, width: 0.94, height: 0.33, label: 'MRZ (Lectura)' },
-  domicilio: { x: 0.05, y: 0.22, width: 0.90, height: 0.23, label: 'Domicilio' },
-  padres: { x: 0.05, y: 0.11, width: 0.52, height: 0.10, label: 'Nombre Padres' },
-  lugar_nac: { x: 0.05, y: 0.02, width: 0.70, height: 0.09, label: 'Lugar Nac.' }
+  mrz: { x: 0.04, y: 0.64, width: 0.92, height: 0.31, label: 'MRZ (Lectura)' },
+  domicilio: { x: 0.28, y: 0.06, width: 0.38, height: 0.23, label: 'Domicilio' },
+  padres: { x: 0.28, y: 0.48, width: 0.34, height: 0.12, label: 'Nombre Padres' },
+  lugar_nac: { x: 0.28, y: 0.31, width: 0.30, height: 0.15, label: 'Lugar Nac.' }
 };
 
-// --- INITIALIZATION & EVENT LISTENERS ---
+// --- INITIALIZATION ---
 function init() {
   setupFileUpload();
   setupCanvasEvents();
   setupControls();
   setupDemos();
+  setupCalibration();
+  setupGuideModal();
+  setMode('simple'); // Default to simple mode
+}
+
+// Mode switcher (Simple vs Advanced)
+function setMode(mode) {
+  state.appMode = mode;
+  if (mode === 'simple') {
+    btnModeSimple.classList.add('active');
+    btnModeAdvanced.classList.remove('active');
+    advancedElements.forEach(el => el.classList.add('hidden'));
+    state.activeStyle = 'pixelate';
+    state.intensity = 18;
+    state.bwEnabled = true; // Always B&W in simple mode for maximum security
+    if (badgeWm) badgeWm.textContent = '2';
+  } else {
+    btnModeSimple.classList.remove('active');
+    btnModeAdvanced.classList.add('active');
+    advancedElements.forEach(el => el.classList.remove('hidden'));
+    if (badgeWm) badgeWm.textContent = '3';
+  }
+  render();
 }
 
 function setupFileUpload() {
@@ -180,6 +237,7 @@ function loadFile(file) {
       state.imgOrientation = 0;
       state.boxes = [];
       state.selectedBoxId = null;
+      resetCalibration();
       updateExportButtons(true);
       emptyState.classList.add('hidden');
       canvasWrapper.classList.remove('hidden');
@@ -191,6 +249,10 @@ function loadFile(file) {
 }
 
 function setupControls() {
+  // Mode switch buttons
+  btnModeSimple.addEventListener('click', () => setMode('simple'));
+  btnModeAdvanced.addEventListener('click', () => setMode('advanced'));
+
   // Redaction style buttons
   document.querySelectorAll('[data-style]').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -206,12 +268,14 @@ function setupControls() {
   });
 
   // Intensity slider
-  redactIntensity.addEventListener('input', (e) => {
-    state.intensity = parseInt(e.target.value, 10);
-    const v = state.intensity;
-    intensityVal.textContent = v < 14 ? 'Baja' : v > 26 ? 'Alta' : 'Media';
-    render();
-  });
+  if (redactIntensity) {
+    redactIntensity.addEventListener('input', (e) => {
+      state.intensity = parseInt(e.target.value, 10);
+      const v = state.intensity;
+      intensityVal.textContent = v < 14 ? 'Baja' : v > 26 ? 'Alta' : 'Media';
+      render();
+    });
+  }
 
   // Preset tabs
   presetTabs.forEach(tab => {
@@ -243,8 +307,17 @@ function setupControls() {
     });
   });
 
+  // Chip info icons -> open modal and scroll to item
+  document.querySelectorAll('.chip-info').forEach(infoBtn => {
+    infoBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const infoKey = infoBtn.dataset.info;
+      openGuideModal(infoKey);
+    });
+  });
+
   // Recommended button (AEPD & Police recommended: Signature + CAN + Support #)
-  btnRecommendAEPD.addEventListener('click', () => {
+  const applyRecommended = () => {
     if (!state.img) {
       alert('Carga primero una imagen de DNI.');
       return;
@@ -253,12 +326,21 @@ function setupControls() {
     ['soporte', 'firma', 'can'].forEach(k => {
       if (PRESETS[k]) addPresetBox(PRESETS[k]);
     });
+  };
+
+  btnRecommendAEPD.addEventListener('click', applyRecommended);
+  btnModalApplyAEPD.addEventListener('click', () => {
+    closeGuideModal();
+    if (state.img) {
+      applyRecommended();
+    } else {
+      // If no image, load front demo and apply
+      loadDemoImage('Spanish_ID_card_(front_side).webp', 'front');
+    }
   });
 
   // Delete selected box
-  btnDeleteSelected.addEventListener('click', () => {
-    deleteSelectedBox();
-  });
+  btnDeleteSelected.addEventListener('click', deleteSelectedBox);
 
   // Clear all boxes
   btnClearBoxes.addEventListener('click', () => {
@@ -368,7 +450,7 @@ function setupControls() {
   btnDownload.addEventListener('click', downloadProtectedImage);
   btnCopyClipboard.addEventListener('click', copyToClipboard);
 
-  // Keyboard navigation (Delete / Backspace / Esc)
+  // Keyboard shortcuts
   window.addEventListener('keydown', (e) => {
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
     if (e.key === 'Delete' || e.key === 'Backspace') {
@@ -377,9 +459,13 @@ function setupControls() {
         deleteSelectedBox();
       }
     } else if (e.key === 'Escape') {
-      state.selectedBoxId = null;
-      btnDeleteSelected.disabled = true;
-      render();
+      if (state.calibration.active) {
+        cancelCalibration();
+      } else {
+        state.selectedBoxId = null;
+        btnDeleteSelected.disabled = true;
+        render();
+      }
     }
   });
 }
@@ -394,17 +480,37 @@ function updateBoxBadge() {
   boxCountBadge.textContent = count === 1 ? '1 zona oculta' : `${count} zonas ocultas`;
 }
 
+// Add preset box applying calibration transformation if available
 function addPresetBox(def) {
   const id = 'box_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4);
+  
+  let x = def.x;
+  let y = def.y;
+  let width = def.width;
+  let height = def.height;
+
+  // Apply calibration mapping if set
+  if (state.calibration.topLeft && state.calibration.bottomRight) {
+    const tl = state.calibration.topLeft;
+    const br = state.calibration.bottomRight;
+    const spanX = br.x - tl.x;
+    const spanY = br.y - tl.y;
+    x = tl.x + def.x * spanX;
+    y = tl.y + def.y * spanY;
+    width = def.width * spanX;
+    height = def.height * spanY;
+  }
+
   state.boxes.push({
     id,
-    x: Math.max(0.01, Math.min(0.95, def.x)),
-    y: Math.max(0.01, Math.min(0.95, def.y)),
-    width: def.width,
-    height: def.height,
+    x: Math.max(0.005, Math.min(0.98, x)),
+    y: Math.max(0.005, Math.min(0.98, y)),
+    width: Math.max(0.02, width),
+    height: Math.max(0.02, height),
     label: def.label,
     style: state.activeStyle
   });
+
   state.selectedBoxId = id;
   btnDeleteSelected.disabled = false;
   updateBoxBadge();
@@ -420,204 +526,141 @@ function deleteSelectedBox() {
   render();
 }
 
-// --- DEMO GENERATOR (100% Synthetic, Safe Canvas DNI Sample) ---
-function setupDemos() {
-  const loadDemo = (type) => {
-    const demoCanvas = document.createElement('canvas');
-    demoCanvas.width = 1000;
-    demoCanvas.height = 630;
-    const dctx = demoCanvas.getContext('2d');
-    drawSyntheticDNI(dctx, 1000, 630, type);
+// --- CALIBRATION (2-Point Anchor Alignment for Custom User Photos) ---
+function setupCalibration() {
+  btnStartCalibration.addEventListener('click', () => {
+    if (!state.img) {
+      alert('Carga primero una imagen de DNI para calibrar.');
+      return;
+    }
+    startCalibration();
+  });
 
-    const img = new Image();
-    img.onload = () => {
-      state.img = img;
-      state.imgOrientation = 0;
-      state.boxes = [];
-      state.selectedBoxId = null;
-      updateExportButtons(true);
-      emptyState.classList.add('hidden');
-      canvasWrapper.classList.remove('hidden');
-
-      // Preload recommended boxes for demo
-      if (type === 'front') {
-        addPresetBox(PRESETS.soporte);
-        addPresetBox(PRESETS.firma);
-        addPresetBox(PRESETS.can);
-      } else {
-        addPresetBox(PRESETS.mrz);
-        addPresetBox(PRESETS.domicilio);
-      }
-      render();
-    };
-    img.src = demoCanvas.toDataURL('image/png');
-  };
-
-  btnDemoFront.addEventListener('click', () => loadDemo('front'));
-  btnDemoBack.addEventListener('click', () => loadDemo('back'));
-  btnEmptyDemo.addEventListener('click', () => loadDemo('front'));
+  btnCancelCalib.addEventListener('click', cancelCalibration);
+  btnResetCalib.addEventListener('click', () => {
+    resetCalibration();
+    cancelCalibration();
+    render();
+  });
 }
 
-function drawSyntheticDNI(ctx, w, h, side) {
-  // Background gradient mimicking Spanish DNI polycarbonate card
-  const grad = ctx.createLinearGradient(0, 0, w, h);
-  grad.addColorStop(0, '#fde68a');
-  grad.addColorStop(0.3, '#fed7aa');
-  grad.addColorStop(0.7, '#e0e7ff');
-  grad.addColorStop(1, '#c7d2fe');
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, w, h);
+function startCalibration() {
+  state.calibration.active = true;
+  state.calibration.step = 1;
+  calibrationBar.classList.remove('hidden');
+  calibIndicator.textContent = 'Paso 1 de 2';
+  calibInstruction.innerHTML = 'Toca la <strong>esquina superior izquierda</strong> del DNI';
+  canvas.style.cursor = 'crosshair';
+}
 
-  // Guilloche / security waves pattern
-  ctx.save();
-  ctx.strokeStyle = 'rgba(99, 102, 241, 0.15)';
-  ctx.lineWidth = 1.5;
-  for (let i = -100; i < w + 200; i += 28) {
-    ctx.beginPath();
-    ctx.moveTo(i, 0);
-    ctx.bezierCurveTo(i + 100, h * 0.33, i - 100, h * 0.66, i + 50, h);
-    ctx.stroke();
+function cancelCalibration() {
+  state.calibration.active = false;
+  state.calibration.step = 0;
+  calibrationBar.classList.add('hidden');
+  canvas.style.cursor = 'default';
+  render();
+}
+
+function resetCalibration() {
+  state.calibration.topLeft = null;
+  state.calibration.bottomRight = null;
+  btnStartCalibration.textContent = '🎯 Ajustar esquinas del DNI (Mejora plantillas)';
+}
+
+function handleCalibrationClick(normX, normY) {
+  if (state.calibration.step === 1) {
+    state.calibration.topLeft = { x: normX, y: normY };
+    state.calibration.step = 2;
+    calibIndicator.textContent = 'Paso 2 de 2';
+    calibInstruction.innerHTML = 'Ahora toca la <strong>esquina inferior derecha</strong> del DNI';
+    render();
+  } else if (state.calibration.step === 2) {
+    const tl = state.calibration.topLeft;
+    // Ensure bottom right is indeed lower and further right
+    state.calibration.bottomRight = {
+      x: Math.max(tl.x + 0.1, normX),
+      y: Math.max(tl.y + 0.1, normY)
+    };
+    state.calibration.active = false;
+    state.calibration.step = 0;
+    calibrationBar.classList.add('hidden');
+    canvas.style.cursor = 'default';
+    btnStartCalibration.textContent = '✓ DNI Calibrado (Reajustar)';
+    render();
   }
-  ctx.restore();
+}
 
-  // Flag & Header
-  ctx.fillStyle = '#1e3a8a';
-  ctx.font = 'bold 22px sans-serif';
+// --- DEMO LOADER (Uses Uploaded Spanish DNI Real Images) ---
+function setupDemos() {
+  const loadDemo = (imagePath, side) => {
+    loadDemoImage(imagePath, side);
+  };
 
-  if (side === 'front') {
-    // Header
-    ctx.fillText('ESPAÑA', 130, 48);
-    ctx.font = '13px sans-serif';
-    ctx.fillStyle = '#475569';
-    ctx.fillText('DOCUMENTO NACIONAL DE IDENTIDAD', 130, 70);
-
-    // EU Flag emblem
-    ctx.fillStyle = '#1e40af';
-    ctx.fillRect(40, 30, 65, 45);
-    ctx.fillStyle = '#fbbf24';
-    ctx.font = 'bold 15px sans-serif';
-    ctx.fillText('★ ES ★', 48, 58);
-
-    // Support # (IDESP)
-    ctx.fillStyle = '#0f172a';
-    ctx.font = 'bold 14px monospace';
-    ctx.fillText('NUM. SOPORTE / IDESP: AAA000123', 640, 45);
-
-    // Main photo placeholder
-    ctx.fillStyle = '#cbd5e1';
-    ctx.fillRect(40, 100, 210, 270);
-    ctx.fillStyle = '#64748b';
-    ctx.beginPath();
-    ctx.arc(145, 200, 50, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(145, 330, 80, 0, Math.PI, true);
-    ctx.fill();
-    ctx.fillStyle = '#334155';
-    ctx.font = '12px sans-serif';
-    ctx.fillText('FOTOGRAFÍA DEMO', 88, 360);
-
-    // Secondary ghost photo
-    ctx.fillStyle = 'rgba(148, 163, 184, 0.4)';
-    ctx.fillRect(800, 320, 150, 180);
-    ctx.strokeRect(800, 320, 150, 180);
-
-    // DNI Data fields
-    ctx.fillStyle = '#0f172a';
-    ctx.font = '11px sans-serif';
-    const fields = [
-      { label: 'PRIMER APELLIDO / SURNAME', val: 'GARCÍA', y: 125 },
-      { label: 'SEGUNDO APELLIDO', val: 'LÓPEZ', y: 175 },
-      { label: 'NOMBRE / GIVEN NAME', val: 'MARÍA DEL CARMEN', y: 225 },
-      { label: 'SEXO / SEX', val: 'F', y: 275, x2: 'NACIONALIDAD / NATIONALITY: ESP' },
-      { label: 'FECHA NACIMIENTO', val: '14 10 1990', y: 325, x2: 'VALIDEZ: 14 10 2030' },
-      { label: 'DNI / NIF', val: '12345678Z', y: 380, big: true }
-    ];
-
-    fields.forEach(f => {
-      ctx.fillStyle = '#64748b';
-      ctx.font = '10px sans-serif';
-      ctx.fillText(f.label, 280, f.y);
-      ctx.fillStyle = '#0f172a';
-      ctx.font = f.big ? 'bold 26px monospace' : 'bold 16px sans-serif';
-      ctx.fillText(f.val, 280, f.y + 20);
-
-      if (f.x2) {
-        ctx.fillStyle = '#64748b';
-        ctx.font = '10px sans-serif';
-        ctx.fillText(f.x2, 530, f.y + 20);
-      }
-    });
-
-    // Signature area
-    ctx.strokeStyle = '#94a3b8';
-    ctx.strokeRect(280, 435, 300, 110);
-    ctx.fillStyle = '#64748b';
-    ctx.font = '10px sans-serif';
-    ctx.fillText('FIRMA DEL TITULAR', 285, 450);
-    // Fake handwriting signature curve
-    ctx.beginPath();
-    ctx.strokeStyle = '#1e293b';
-    ctx.lineWidth = 2.5;
-    ctx.moveTo(310, 510);
-    ctx.bezierCurveTo(340, 460, 380, 520, 420, 480);
-    ctx.bezierCurveTo(460, 440, 490, 530, 550, 495);
-    ctx.stroke();
-
-    // CAN Code
-    ctx.fillStyle = '#334155';
-    ctx.font = '10px sans-serif';
-    ctx.fillText('CÓDIGO CAN', 810, 535);
-    ctx.font = 'bold 20px monospace';
-    ctx.fillText('123456', 810, 565);
-
-  } else {
-    // Back of DNI
-    ctx.fillText('REVERSO — DIRECCIÓN Y DATOS MECÁNICOS', 50, 45);
-
-    ctx.fillStyle = '#64748b';
-    ctx.font = '11px sans-serif';
-    ctx.fillText('HIJO/A DE:', 50, 85);
-    ctx.fillStyle = '#0f172a';
-    ctx.font = 'bold 15px sans-serif';
-    ctx.fillText('ANTONIO Y CARMEN', 50, 105);
-
-    ctx.fillStyle = '#64748b';
-    ctx.font = '11px sans-serif';
-    ctx.fillText('LUGAR DE NACIMIENTO / PROVINCIA:', 50, 140);
-    ctx.fillStyle = '#0f172a';
-    ctx.font = 'bold 15px sans-serif';
-    ctx.fillText('MADRID (MADRID)', 50, 160);
-
-    ctx.fillStyle = '#64748b';
-    ctx.font = '11px sans-serif';
-    ctx.fillText('DOMICILIO / ADDRESS:', 50, 195);
-    ctx.fillStyle = '#0f172a';
-    ctx.font = 'bold 15px sans-serif';
-    ctx.fillText('CALLE DE LA PRINCESA 24, 3º B', 50, 218);
-    ctx.fillText('28008 MADRID (ESPAÑA)', 50, 240);
-
-    // Chip icon
-    ctx.fillStyle = '#d97706';
-    ctx.fillRect(720, 70, 180, 130);
-    ctx.fillStyle = '#fef3c7';
-    ctx.fillRect(740, 90, 140, 90);
-    ctx.fillStyle = '#b45309';
-    ctx.font = 'bold 12px sans-serif';
-    ctx.fillText('MICROCHIP DNIe', 755, 140);
-
-    // MRZ (Machine Readable Zone - 3 lines)
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-    ctx.fillRect(30, 400, 940, 205);
-    ctx.strokeStyle = '#cbd5e1';
-    ctx.strokeRect(30, 400, 940, 205);
-
-    ctx.fillStyle = '#0f172a';
-    ctx.font = 'bold 24px monospace';
-    ctx.fillText('IDESP1234567897<<<<<<<<<<<<<<<', 50, 455);
-    ctx.fillText('9010148F3010148ESP<<<<<<<<<<<4', 50, 515);
-    ctx.fillText('GARCIA<LOPEZ<<MARIA<DEL<CARMEN', 50, 575);
+  btnDemoFront.addEventListener('click', () => loadDemo('Spanish_ID_card_(front_side).webp', 'front'));
+  btnDemoBack.addEventListener('click', () => loadDemo('back.jpg', 'back'));
+  if (btnDemoFrontThumb) {
+    btnDemoFrontThumb.addEventListener('click', () => loadDemo('Spanish_ID_card_(front_side).webp', 'front'));
   }
+  if (btnDemoBackThumb) {
+    btnDemoBackThumb.addEventListener('click', () => loadDemo('back.jpg', 'back'));
+  }
+}
+
+function loadDemoImage(imagePath, side) {
+  const img = new Image();
+  img.onload = () => {
+    state.img = img;
+    state.imgOrientation = 0;
+    state.boxes = [];
+    state.selectedBoxId = null;
+    resetCalibration();
+    updateExportButtons(true);
+    emptyState.classList.add('hidden');
+    canvasWrapper.classList.remove('hidden');
+
+    // Switch to corresponding tab
+    if (side === 'front') {
+      presetTabs[0].click();
+      addPresetBox(PRESETS.soporte);
+      addPresetBox(PRESETS.firma);
+      addPresetBox(PRESETS.can);
+    } else {
+      presetTabs[1].click();
+      addPresetBox(PRESETS.mrz);
+      addPresetBox(PRESETS.domicilio);
+    }
+    render();
+  };
+  img.src = imagePath;
+}
+
+// --- GUIDE MODAL (Explanatory Privacy Info) ---
+function setupGuideModal() {
+  btnOpenGuide.addEventListener('click', () => openGuideModal());
+  btnCloseGuide.addEventListener('click', closeGuideModal);
+  guideModal.addEventListener('click', (e) => {
+    if (e.target === guideModal) closeGuideModal();
+  });
+}
+
+function openGuideModal(targetId) {
+  guideModal.classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+
+  // Highlight specific item if triggered from chip info
+  document.querySelectorAll('.guide-item').forEach(item => item.classList.remove('highlighted'));
+  if (targetId) {
+    const el = document.getElementById('guide-item-' + targetId);
+    if (el) {
+      el.classList.add('highlighted');
+      setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
+    }
+  }
+}
+
+function closeGuideModal() {
+  guideModal.classList.add('hidden');
+  document.body.style.overflow = '';
 }
 
 // --- MAIN RENDER PIPELINE ---
@@ -628,7 +671,7 @@ function render(forExport = false) {
   const baseW = isRotated ? state.img.height : state.img.width;
   const baseH = isRotated ? state.img.width : state.img.height;
 
-  // Set canvas dimension
+  // Set canvas dimensions
   if (canvas.width !== baseW || canvas.height !== baseH) {
     canvas.width = baseW;
     canvas.height = baseH;
@@ -662,15 +705,20 @@ function render(forExport = false) {
     applyWatermark(baseW, baseH);
   }
 
-  // 5. Draw UI Handles / Guides (Only when not exporting)
-  if (!forExport && state.showGuides) {
-    drawEditorGuides(baseW, baseH);
+  // 5. Draw UI Handles, Guides and Calibration markers (Only in live editor)
+  if (!forExport) {
+    if (state.showGuides) {
+      drawEditorGuides(baseW, baseH);
+    }
+    if (state.calibration.active || state.calibration.topLeft) {
+      drawCalibrationMarkers(baseW, baseH);
+    }
   }
 
   ctx.restore();
 }
 
-// --- FILTER: OBFUSCATION (Pixelate, Blur, Blackout) ---
+// --- FILTER: OBFUSCATION ---
 function applyObfuscationBoxes(width, height) {
   state.boxes.forEach(box => {
     const bx = Math.round(box.x * width);
@@ -680,7 +728,6 @@ function applyObfuscationBoxes(width, height) {
 
     if (bw <= 0 || bh <= 0) return;
 
-    // Constrain to canvas
     const x = Math.max(0, bx);
     const y = Math.max(0, by);
     const w = Math.min(width - x, bw);
@@ -694,7 +741,6 @@ function applyObfuscationBoxes(width, height) {
       ctx.fillStyle = '#0a0a0a';
       ctx.fillRect(x, y, w, h);
     } else if (style === 'pixelate') {
-      // Scale down and scale up to pixelate
       const blockSize = Math.max(6, Math.round(state.intensity * (width / 900)));
       const tempCanvas = document.createElement('canvas');
       const tempCtx = tempCanvas.getContext('2d');
@@ -711,7 +757,6 @@ function applyObfuscationBoxes(width, height) {
       ctx.drawImage(tempCanvas, 0, 0, smallW, smallH, x, y, w, h);
       ctx.restore();
     } else if (style === 'blur') {
-      // Gaussian/box blur approximation via multi-pass downscale & upscale + context filter
       const blurRadius = Math.max(4, Math.round(state.intensity * (width / 1100)));
       const tempCanvas = document.createElement('canvas');
       const tempCtx = tempCanvas.getContext('2d');
@@ -740,14 +785,9 @@ function applyBlackAndWhiteFilter(width, height) {
 
     // Standard ITU-R BT.601 perceptual luminance formula
     let gray = 0.299 * r + 0.587 * g + 0.114 * b;
-
-    // Apply brightness
     gray += brightnessFactor;
-
-    // Apply contrast
     gray = (gray - 128) * contrastFactor + 128;
 
-    // Clamp 0..255
     if (gray < 0) gray = 0;
     if (gray > 255) gray = 255;
 
@@ -759,7 +799,7 @@ function applyBlackAndWhiteFilter(width, height) {
   ctx.putImageData(imgData, 0, 0);
 }
 
-// --- FILTER: WATERMARK OF PURPOSE ---
+// --- FILTER: WATERMARK ---
 function applyWatermark(width, height) {
   let text = state.wmText.trim();
   if (state.wmIncludeDate) {
@@ -770,7 +810,6 @@ function applyWatermark(width, height) {
   const opacity = state.wmOpacity / 100;
   ctx.globalAlpha = opacity;
 
-  // Adaptive font size based on image width and scale slider
   const baseFontSize = Math.max(14, Math.round((width / 42) * (state.wmScale / 100)));
   ctx.font = `bold ${baseFontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
   ctx.textBaseline = 'middle';
@@ -780,7 +819,6 @@ function applyWatermark(width, height) {
   const color = state.wmColor;
 
   if (mode === 'tiled') {
-    // Diagonal repeating pattern across the entire document
     const angle = -28 * (Math.PI / 180);
     const textMetrics = ctx.measureText(text);
     const textWidth = textMetrics.width;
@@ -805,7 +843,6 @@ function applyWatermark(width, height) {
       rowIndex++;
     }
   } else if (mode === 'single') {
-    // Prominent cross stamp across the center
     const angle = -24 * (Math.PI / 180);
     ctx.translate(width / 2, height / 2);
     ctx.rotate(angle);
@@ -813,7 +850,6 @@ function applyWatermark(width, height) {
     const stampFontSize = Math.round(baseFontSize * 1.5);
     ctx.font = `900 ${stampFontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
     
-    // Draw stamped box around text
     const tm = ctx.measureText(text);
     const pad = stampFontSize * 0.5;
     ctx.lineWidth = Math.max(3, stampFontSize / 12);
@@ -822,12 +858,8 @@ function applyWatermark(width, height) {
 
     drawWatermarkText(text, 0, 0, color, stampFontSize);
   } else if (mode === 'banner') {
-    // 2 Semi-transparent horizontal ribbons (top & bottom)
     const ribbonH = baseFontSize * 2;
-    
-    // Top banner
     drawRibbon(0, height * 0.22, width, ribbonH, text, color, baseFontSize);
-    // Bottom banner
     drawRibbon(0, height * 0.72, width, ribbonH, text, color, baseFontSize);
   }
 
@@ -835,7 +867,6 @@ function applyWatermark(width, height) {
 }
 
 function drawWatermarkText(text, x, y, color, fontSize) {
-  // Outline stroke for readability on any background
   ctx.lineJoin = 'round';
   ctx.miterLimit = 2;
   ctx.strokeStyle = color === '#ffffff' ? '#000000' : '#ffffff';
@@ -852,8 +883,57 @@ function drawRibbon(rx, ry, rw, rh, text, color, fontSize) {
   drawWatermarkText(text, rw / 2, ry, color, fontSize);
 }
 
+// --- CALIBRATION MARKERS DRAWING ---
+function drawCalibrationMarkers(width, height) {
+  ctx.save();
+  const tl = state.calibration.topLeft;
+  const br = state.calibration.bottomRight;
+
+  if (tl) {
+    drawTargetPin(tl.x * width, tl.y * height, '#2563eb', '1: Esquina Superior');
+  }
+  if (br) {
+    drawTargetPin(br.x * width, br.y * height, '#059669', '2: Esquina Inferior');
+
+    // Draw calibrated frame
+    ctx.strokeStyle = 'rgba(5, 150, 105, 0.8)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 6]);
+    ctx.strokeRect(tl.x * width, tl.y * height, (br.x - tl.x) * width, (br.y - tl.y) * height);
+  }
+  ctx.restore();
+}
+
+function drawTargetPin(px, py, color, label) {
+  ctx.save();
+  ctx.fillStyle = color;
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 3;
+
+  ctx.beginPath();
+  ctx.arc(px, py, 9, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  // Inner dot
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  ctx.arc(px, py, 3, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Tag
+  ctx.font = 'bold 12px sans-serif';
+  ctx.fillStyle = color;
+  const tm = ctx.measureText(label);
+  ctx.fillRect(px + 12, py - 10, tm.width + 10, 20);
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText(label, px + 17, py + 4);
+
+  ctx.restore();
+}
+
 // --- INTERACTIVE EDITING GUIDES & HANDLES ---
-const HANDLE_SIZE = 10;
+const HANDLE_SIZE = 12;
 
 function drawEditorGuides(width, height) {
   state.boxes.forEach(box => {
@@ -864,9 +944,8 @@ function drawEditorGuides(width, height) {
     const h = box.height * height;
 
     ctx.save();
-    // Dashed or solid border
     ctx.lineWidth = isSelected ? 2 : 1.5;
-    ctx.strokeStyle = isSelected ? '#2563eb' : 'rgba(37, 99, 235, 0.5)';
+    ctx.strokeStyle = isSelected ? '#2563eb' : 'rgba(37, 99, 235, 0.6)';
     ctx.setLineDash(isSelected ? [] : [5, 4]);
     ctx.strokeRect(x, y, w, h);
 
@@ -905,7 +984,7 @@ function drawEditorGuides(width, height) {
     ctx.restore();
   });
 
-  // Current drawing box preview
+  // Current drawing preview
   if (state.interaction.mode === 'drawing') {
     const cur = state.interaction;
     const x = Math.min(cur.startX, cur.currentX);
@@ -923,7 +1002,7 @@ function drawEditorGuides(width, height) {
   }
 }
 
-// --- CANVAS MOUSE / TOUCH EVENTS (DRAW, RESIZE, MOVE) ---
+// --- CANVAS MOUSE / TOUCH EVENTS ---
 function setupCanvasEvents() {
   const getCanvasCoords = (e) => {
     const rect = canvas.getBoundingClientRect();
@@ -944,7 +1023,7 @@ function setupCanvasEvents() {
     const by = box.y * h;
     const bw = box.width * w;
     const bh = box.height * h;
-    const tol = HANDLE_SIZE + 4;
+    const tol = HANDLE_SIZE + 6;
 
     const handles = {
       nw: Math.hypot(px - bx, py - by) < tol,
@@ -962,7 +1041,6 @@ function setupCanvasEvents() {
   const findHitBox = (px, py) => {
     const w = canvas.width;
     const h = canvas.height;
-    // Iterate in reverse so top boxes get selected first
     for (let i = state.boxes.length - 1; i >= 0; i--) {
       const b = state.boxes[i];
       const bx = b.x * w;
@@ -982,6 +1060,12 @@ function setupCanvasEvents() {
     const coords = getCanvasCoords(e);
     const px = coords.x;
     const py = coords.y;
+
+    // If calibration is active, record calibration point and return
+    if (state.calibration.active) {
+      handleCalibrationClick(px / canvas.width, py / canvas.height);
+      return;
+    }
 
     // Check if clicked on handle of selected box
     if (state.selectedBoxId) {
@@ -1037,13 +1121,12 @@ function setupCanvasEvents() {
 
   // Pointer Move
   canvas.addEventListener('pointermove', (e) => {
-    if (!state.img) return;
+    if (!state.img || state.calibration.active) return;
     const coords = getCanvasCoords(e);
     const px = coords.x;
     const py = coords.y;
     const cur = state.interaction;
 
-    // Update cursor style
     if (cur.mode === 'idle') {
       if (state.selectedBoxId) {
         const selBox = state.boxes.find(b => b.id === state.selectedBoxId);
@@ -1105,6 +1188,7 @@ function setupCanvasEvents() {
 
   // Pointer Up / Leave
   const handlePointerEnd = () => {
+    if (state.calibration.active) return;
     const cur = state.interaction;
     if (cur.mode === 'drawing') {
       const minX = Math.min(cur.startX, cur.currentX);
@@ -1112,7 +1196,6 @@ function setupCanvasEvents() {
       const w = Math.abs(cur.currentX - cur.startX);
       const h = Math.abs(cur.currentY - cur.startY);
 
-      // Only save if drawn rectangle is larger than 10x10 px
       if (w > 10 && h > 10) {
         const id = 'box_' + Date.now();
         state.boxes.push({
@@ -1141,7 +1224,6 @@ function setupCanvasEvents() {
 function downloadProtectedImage() {
   if (!state.img) return;
 
-  // Render clean version without editor guides
   render(true);
 
   const format = exportFormat.value;
@@ -1154,18 +1236,16 @@ function downloadProtectedImage() {
   link.href = dataUrl;
   link.click();
 
-  // Restore editor guides view
   render(false);
 }
 
 async function copyToClipboard() {
   if (!state.img) return;
   if (!navigator.clipboard || !window.ClipboardItem) {
-    alert('Tu navegador no admite copiar imágenes directamente al portapapeles. Usa el botón "Descargar DNI Protegido".');
+    alert('Tu navegador no admite copiar imágenes directamente al portapapeles. Usa el botón "Descargar".');
     return;
   }
 
-  // Render clean version
   render(true);
 
   try {
@@ -1182,7 +1262,7 @@ async function copyToClipboard() {
     }, 'image/png');
   } catch (err) {
     console.error('Clipboard error:', err);
-    alert('No se pudo copiar al portapapeles. Prueba a usar el botón Descargar.');
+    alert('No se pudo copiar al portapapeles. Usa el botón Descargar.');
   } finally {
     render(false);
   }

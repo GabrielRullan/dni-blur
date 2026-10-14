@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>ProtegeDNI — Anonimizador de DNI Español (100% Local)</title>
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -11,32 +11,166 @@
   <header class="app-header">
     <div class="brand">
       <div class="brand-icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
           <path d="m9 12 2 2 4-4"/>
         </svg>
       </div>
-      <div>
-        <h1>ProtegeDNI</h1>
-        <p class="subtitle">Protección segura de documentos de identidad según recomendaciones AEPD / Policía Nacional</p>
+      <div class="brand-text">
+        <div class="brand-title-row">
+          <h1>ProtegeDNI</h1>
+          <span class="version-tag">Local</span>
+        </div>
+        <p class="subtitle">Privacidad y anonimización de DNI según AEPD y Policía Nacional</p>
       </div>
     </div>
 
-    <div class="privacy-pill" title="Ningún dato sale de tu navegador. Funciona incluso sin conexión a Internet.">
-      <span class="pulse-dot"></span>
-      <span>100% En tu dispositivo · Sin subida a servidores</span>
+    <!-- Mode Selector & Guide Button -->
+    <div class="header-actions">
+      <!-- Simple / Advanced Mode Toggle -->
+      <div class="mode-switch" title="Cambia entre modo sencillo (rápido) y modo avanzado (control total)">
+        <span class="mode-label">Modo:</span>
+        <div class="segmented-control mode-segments">
+          <button type="button" class="seg-btn active" id="btn-mode-simple">Sencillo</button>
+          <button type="button" class="seg-btn" id="btn-mode-advanced">Avanzado</button>
+        </div>
+      </div>
+
+      <button type="button" id="btn-open-guide" class="btn btn-ghost btn-sm btn-guide" title="Ver guía de elementos del DNI y por qué anonimizarlos">
+        <span class="guide-icon">ℹ️</span>
+        <span class="btn-text">¿Qué anonimizar?</span>
+      </button>
+
+      <div class="privacy-pill" title="Ningún dato sale de tu navegador ni se envía a servidores.">
+        <span class="pulse-dot"></span>
+        <span class="pill-text">100% en dispositivo</span>
+      </div>
     </div>
   </header>
 
-  <!-- Main Workspace -->
+  <!-- Calibration Banner (Appears when user clicks 'Calibrar posición') -->
+  <div id="calibration-bar" class="calibration-bar hidden">
+    <div class="calib-content">
+      <span class="calib-step-indicator" id="calib-indicator">Paso 1 de 2</span>
+      <span class="calib-instruction" id="calib-instruction">Toca la <strong>esquina superior izquierda</strong> del DNI</span>
+    </div>
+    <div class="calib-actions">
+      <button type="button" id="btn-cancel-calib" class="btn btn-ghost btn-sm">Cancelar</button>
+      <button type="button" id="btn-reset-calib" class="btn btn-ghost btn-sm" title="Volver al calibrado por defecto">Restablecer</button>
+    </div>
+  </div>
+
+  <!-- Main Workspace (Mobile First) -->
   <main class="workspace">
-    <!-- Left Sidebar Controls -->
+    <!-- Canvas / Preview Stage (Prominent on Mobile) -->
+    <section class="stage-area">
+      <!-- Toolbar above canvas -->
+      <div class="stage-toolbar">
+        <div class="toolbar-hint" id="toolbar-hint">
+          <span class="hint-icon">👆</span>
+          <span id="hint-text"><strong>Arrastra</strong> para crear una zona oculta · <strong>Toca</strong> para mover o ajustar</span>
+        </div>
+        <div class="stage-quick-actions">
+          <button type="button" id="btn-rotate" class="btn btn-ghost btn-icon" title="Rotar imagen 90°">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/>
+              <path d="M21 3v5h-5"/>
+            </svg>
+          </button>
+          <label class="checkbox-label toggle-guides">
+            <input type="checkbox" id="show-guides" checked>
+            <span>Guías</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Viewport & Canvas -->
+      <div class="canvas-viewport" id="drop-zone">
+        <!-- Empty State -->
+        <div class="empty-state" id="empty-state">
+          <div class="empty-card">
+            <div class="empty-icon">🪪</div>
+            <h3>Sube o arrastra la foto de tu DNI</h3>
+            <p>
+              Procesado seguro 100% en la memoria de tu móvil u ordenador.
+              <strong>Ninguna imagen sale de tu dispositivo.</strong>
+            </p>
+
+            <div class="empty-actions">
+              <label for="file-input" class="btn btn-primary btn-lg">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="17 8 12 3 7 8"/>
+                  <line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+                Seleccionar foto de DNI
+              </label>
+            </div>
+
+            <div class="demo-select-box">
+              <span class="demo-title">O prueba con las imágenes de ejemplo:</span>
+              <div class="demo-cards-row">
+                <button type="button" id="btn-demo-front-thumb" class="demo-thumb-btn">
+                  <img src="Spanish_ID_card_(front_side).webp" alt="DNI Anverso Carmen" class="thumb-img">
+                  <span>Anverso Carmen</span>
+                </button>
+                <button type="button" id="btn-demo-back-thumb" class="demo-thumb-btn">
+                  <img src="back.jpg" alt="DNI Reverso Carmen" class="thumb-img">
+                  <span>Reverso Carmen</span>
+                </button>
+              </div>
+            </div>
+
+            <ul class="security-checklist">
+              <li>🛡️ <strong>Recomendación AEPD:</strong> Oculta Firma, CAN y Nº de Soporte para evitar fraudes y créditos online.</li>
+              <li>🛡️ <strong>Blanco y Negro:</strong> Anula copias a color.</li>
+              <li>🛡️ <strong>Marca de uso:</strong> Destina la copia a un fin único.</li>
+              <li>🛡️ <strong>Sin rastro EXIF/GPS:</strong> Limpia metadatos automáticamente.</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Canvas Container -->
+        <div class="canvas-wrapper hidden" id="canvas-wrapper">
+          <canvas id="dni-canvas"></canvas>
+        </div>
+      </div>
+
+      <!-- Action Bar under Canvas -->
+      <footer class="export-bar">
+        <div class="export-meta">
+          <span class="exif-badge">🛡️ Sin EXIF/GPS</span>
+          <span id="box-count-badge" class="meta-text">0 zonas ocultas</span>
+        </div>
+        <div class="export-buttons">
+          <div class="format-select-wrap">
+            <select id="export-format" class="select-input">
+              <option value="image/jpeg">JPG</option>
+              <option value="image/png">PNG</option>
+            </select>
+          </div>
+          <button type="button" id="btn-copy-clipboard" class="btn btn-secondary" disabled title="Copiar imagen al portapapeles">
+            Copiar
+          </button>
+          <button type="button" id="btn-download" class="btn btn-primary" disabled>
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            Descargar
+          </button>
+        </div>
+      </footer>
+    </section>
+
+    <!-- Controls Panel -->
     <aside class="controls-panel">
-      <!-- Image Upload / Demo Actions -->
+      <!-- Section 0: Document & Calibration -->
       <section class="control-card">
         <div class="card-header">
           <span class="step-badge">0</span>
-          <h2>Documento</h2>
+          <h2>Documento y Calibración</h2>
         </div>
         <div class="file-actions">
           <label for="file-input" class="btn btn-secondary btn-full">
@@ -45,118 +179,133 @@
               <polyline points="17 8 12 3 7 8"/>
               <line x1="12" y1="3" x2="12" y2="15"/>
             </svg>
-            Subir imagen de DNI
+            Cambiar imagen
           </label>
           <input type="file" id="file-input" accept="image/*" hidden>
+
           <div class="demo-row">
-            <button type="button" id="btn-demo-front" class="btn btn-ghost btn-sm" title="Cargar un DNI simulado de prueba (Anverso)">
-              Probar Anverso Demo
+            <button type="button" id="btn-demo-front" class="btn btn-ghost btn-sm" title="Cargar foto DNI Anverso real Carmen">
+              Anverso Demo
             </button>
-            <button type="button" id="btn-demo-back" class="btn btn-ghost btn-sm" title="Cargar un DNI simulado de prueba (Reverso)">
-              Probar Reverso Demo
+            <button type="button" id="btn-demo-back" class="btn btn-ghost btn-sm" title="Cargar foto DNI Reverso real Carmen">
+              Reverso Demo
             </button>
-            <button type="button" id="btn-rotate" class="btn btn-ghost btn-icon" title="Rotar imagen 90°">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/>
-                <path d="M21 3v5h-5"/>
-              </svg>
+          </div>
+
+          <!-- Alignment / Calibration Helper Button -->
+          <div class="calib-trigger-box">
+            <button type="button" id="btn-start-calibration" class="btn btn-outline-accent btn-sm">
+              🎯 Ajustar esquinas del DNI (Mejora plantillas)
             </button>
+            <p class="micro-help">Si tu foto tiene bordes o fondo, marca 2 esquinas para alinear perfectamente los datos.</p>
           </div>
         </div>
       </section>
 
-      <!-- Step 1: Obfuscate Sensitive Data -->
+      <!-- Section 1: Sensitive Data Obfuscation -->
       <section class="control-card">
         <div class="card-header">
           <span class="step-badge">1</span>
-          <h2>Ofuscar datos sensibles</h2>
-        </div>
-        <p class="card-help">
-          Haz clic y arrastra sobre el DNI para crear zonas ocultas, o activa las plantillas rápidas (ajustables en pantalla).
-        </p>
-
-        <div class="field-group">
-          <label class="field-label">Estilo de ocultación</label>
-          <div class="segmented-control" role="radiogroup" aria-label="Estilo de ocultación">
-            <button type="button" class="seg-btn active" data-style="pixelate">Pixelado</button>
-            <button type="button" class="seg-btn" data-style="blur">Desenfoque</button>
-            <button type="button" class="seg-btn" data-style="blackout">Bloque negro</button>
-          </div>
+          <h2>Datos sensibles a ocultar</h2>
         </div>
 
-        <div class="field-group" id="intensity-group">
-          <div class="label-row">
-            <label for="redact-intensity" class="field-label">Intensidad</label>
-            <span id="intensity-val" class="val-badge">Media</span>
-          </div>
-          <input type="range" id="redact-intensity" min="8" max="40" value="18" class="slider">
-        </div>
+        <!-- 1-Click AEPD Recommended Action -->
+        <button type="button" id="btn-recommend-aepd" class="btn btn-accent-highlight btn-full">
+          ✨ Aplicar recomendados AEPD (Firma + CAN + Soporte)
+        </button>
 
+        <!-- Presets Front & Back -->
         <div class="field-group">
           <div class="label-row">
-            <label class="field-label">Plantillas rápidas DNI</label>
+            <label class="field-label">Zonas clave a proteger</label>
             <div class="side-tabs">
               <button type="button" class="tab-btn active" data-preset-tab="front">Anverso</button>
               <button type="button" class="tab-btn" data-preset-tab="back">Reverso</button>
             </div>
           </div>
 
-          <!-- Front Presets (DNI 3.0 / 4.0) -->
+          <!-- Front Presets (Carmen Real Template) -->
           <div class="preset-grid" id="presets-front">
-            <button type="button" class="chip-btn" data-preset="firma" title="Evita que copien tu firma manuscrita">
+            <button type="button" class="chip-btn" data-preset="firma" title="Evita firmas falsas en contratos">
               <span>+ Firma</span>
+              <span class="chip-info" data-info="firma">ℹ️</span>
             </button>
-            <button type="button" class="chip-btn" data-preset="can" title="Código numérico de acceso (6 dígitos abajo a la derecha)">
+            <button type="button" class="chip-btn" data-preset="can" title="Código numérico de acceso NFC">
               <span>+ Código CAN</span>
+              <span class="chip-info" data-info="can">ℹ️</span>
             </button>
-            <button type="button" class="chip-btn" data-preset="soporte" title="Número de soporte / IDESP (impide trámites fraudulentos)">
+            <button type="button" class="chip-btn" data-preset="soporte" title="Número de soporte / IDESP (fundamental)">
               <span>+ Nº Soporte</span>
+              <span class="chip-info" data-info="soporte">ℹ️</span>
             </button>
-            <button type="button" class="chip-btn" data-preset="validez" title="Fecha de validez / emisión">
-              <span>+ Validez / Emisión</span>
+            <button type="button" class="chip-btn" data-preset="validez" title="Fecha de validez del documento">
+              <span>+ Validez</span>
+              <span class="chip-info" data-info="validez">ℹ️</span>
             </button>
             <button type="button" class="chip-btn" data-preset="nacimiento" title="Fecha de nacimiento">
               <span>+ Fecha Nac.</span>
+              <span class="chip-info" data-info="nacimiento">ℹ️</span>
             </button>
-            <button type="button" class="chip-btn" data-preset="foto_extra" title="Foto fantasma / ventana transparente">
-              <span>+ Foto secundaria</span>
+            <button type="button" class="chip-btn" data-preset="foto_extra" title="Foto secundaria transparente">
+              <span>+ Foto sec.</span>
+              <span class="chip-info" data-info="foto_extra">ℹ️</span>
             </button>
           </div>
 
-          <!-- Back Presets -->
+          <!-- Back Presets (Carmen Real Template) -->
           <div class="preset-grid hidden" id="presets-back">
-            <button type="button" class="chip-btn" data-preset="mrz" title="Las 3 líneas inferiores de lectura mecánica">
-              <span>+ Código MRZ (Inferior)</span>
+            <button type="button" class="chip-btn" data-preset="mrz" title="Código de lectura mecánica inferior">
+              <span>+ MRZ (Inferior)</span>
+              <span class="chip-info" data-info="mrz">ℹ️</span>
             </button>
-            <button type="button" class="chip-btn" data-preset="domicilio" title="Dirección completa de residencia">
+            <button type="button" class="chip-btn" data-preset="domicilio" title="Dirección de residencia completa">
               <span>+ Domicilio</span>
+              <span class="chip-info" data-info="domicilio">ℹ️</span>
             </button>
-            <button type="button" class="chip-btn" data-preset="padres" title="Nombre de los padres (Hijo/a de...)">
-              <span>+ Nombre Padres</span>
+            <button type="button" class="chip-btn" data-preset="padres" title="Nombre de los padres">
+              <span>+ Padres</span>
+              <span class="chip-info" data-info="padres">ℹ️</span>
             </button>
-            <button type="button" class="chip-btn" data-preset="lugar_nac" title="Lugar de nacimiento y provincia">
-              <span>+ Lugar Nacimiento</span>
+            <button type="button" class="chip-btn" data-preset="lugar_nac" title="Lugar y provincia de nacimiento">
+              <span>+ Lugar Nac.</span>
+              <span class="chip-info" data-info="lugar_nac">ℹ️</span>
             </button>
           </div>
         </div>
 
-        <div class="box-actions">
-          <button type="button" id="btn-recommend-aepd" class="btn btn-outline-accent btn-sm">
-            ✨ Aplicar recomendados (Firma + CAN + Soporte)
+        <div class="box-subactions">
+          <button type="button" id="btn-delete-selected" class="btn btn-ghost btn-sm" disabled>
+            Borrar selección
           </button>
-          <div class="box-subactions">
-            <button type="button" id="btn-delete-selected" class="btn btn-ghost btn-sm" disabled>
-              Borrar seleccionado
-            </button>
-            <button type="button" id="btn-clear-boxes" class="btn btn-ghost btn-sm">
-              Limpiar zonas
-            </button>
+          <button type="button" id="btn-clear-boxes" class="btn btn-ghost btn-sm">
+            Limpiar todo
+          </button>
+        </div>
+
+        <!-- Advanced Only: Obfuscation Style and Intensity -->
+        <div id="advanced-obfuscation-controls" class="advanced-only hidden">
+          <hr class="card-divider">
+          <div class="field-group">
+            <label class="field-label">Estilo de censura (Avanzado)</label>
+            <div class="segmented-control" role="radiogroup" aria-label="Estilo de ocultación">
+              <button type="button" class="seg-btn active" data-style="pixelate">Pixelado</button>
+              <button type="button" class="seg-btn" data-style="blur">Desenfoque</button>
+              <button type="button" class="seg-btn" data-style="blackout">Negro</button>
+            </div>
+          </div>
+
+          <div class="field-group" id="intensity-group">
+            <div class="label-row">
+              <label for="redact-intensity" class="field-label">Intensidad</label>
+              <span id="intensity-val" class="val-badge">Media</span>
+            </div>
+            <input type="range" id="redact-intensity" min="8" max="40" value="18" class="slider">
           </div>
         </div>
       </section>
 
-      <!-- Step 2: Black & White Filter -->
-      <section class="control-card">
+      <!-- Section 2: Black & White Filter (Hidden in Simple Mode) -->
+      <section class="control-card advanced-only hidden" id="card-bw-filter">
         <div class="card-header">
           <span class="step-badge">2</span>
           <h2>Filtro Blanco y Negro</h2>
@@ -166,7 +315,7 @@
           </label>
         </div>
         <p class="card-help">
-          Enviar el DNI en escala de grises invalida su uso como copia a color original.
+          Invalida el uso de copias a color fraudulentas.
         </p>
 
         <div id="bw-controls">
@@ -187,10 +336,10 @@
         </div>
       </section>
 
-      <!-- Step 3: Watermark of Purpose -->
+      <!-- Section 3: Watermark of Purpose -->
       <section class="control-card">
         <div class="card-header">
-          <span class="step-badge">3</span>
+          <span class="step-badge" id="badge-wm">2</span>
           <h2>Marca de agua de uso</h2>
           <label class="toggle-switch">
             <input type="checkbox" id="wm-enabled" checked>
@@ -200,150 +349,200 @@
 
         <div id="wm-controls">
           <div class="field-group">
-            <label for="wm-text" class="field-label">Motivo / Destinatario de la copia</label>
+            <label for="wm-text" class="field-label">Destino o motivo de la copia</label>
             <input
               type="text"
               id="wm-text"
               class="text-input"
-              placeholder="Ej: USO EXCLUSIVO ALQUILER PISO"
+              placeholder="Ej: USO EXCLUSIVO ALQUILER"
               value="COPIA VÁLIDA SOLO PARA VERIFICACIÓN"
               maxlength="90"
             >
           </div>
 
-          <div class="quick-tags" aria-label="Sugerencias rápidas de marca de agua">
+          <div class="quick-tags" aria-label="Sugerencias rápidas">
             <button type="button" class="tag-btn" data-text="USO EXCLUSIVO ALQUILER DE VIVIENDA">Alquiler</button>
             <button type="button" class="tag-btn" data-text="USO EXCLUSIVO CHECK-IN HOTEL">Hotel</button>
             <button type="button" class="tag-btn" data-text="USO EXCLUSIVO CONTRATO LABORAL">Trabajo</button>
             <button type="button" class="tag-btn" data-text="USO EXCLUSIVO TRÁMITE BANCARIO">Banco</button>
-            <button type="button" class="tag-btn" data-text="USO EXCLUSIVO COMPRAVENTA">Compraventa</button>
           </div>
 
           <div class="checkbox-row">
             <label class="checkbox-label">
               <input type="checkbox" id="wm-include-date" checked>
-              <span>Añadir fecha actual automáticamente (<span id="current-date-preview"></span>)</span>
+              <span>Añadir fecha actual (<span id="current-date-preview"></span>)</span>
             </label>
           </div>
 
-          <div class="field-group">
-            <label class="field-label">Disposición</label>
-            <div class="segmented-control">
-              <button type="button" class="seg-btn active" data-wm-mode="tiled">Mosaico diagonal</button>
-              <button type="button" class="seg-btn" data-wm-mode="single">Sello cruzado</button>
-              <button type="button" class="seg-btn" data-wm-mode="banner">Franjas</button>
-            </div>
-          </div>
-
-          <div class="field-group">
-            <label class="field-label">Color de marca</label>
-            <div class="color-options">
-              <button type="button" class="color-swatch active" data-color="#d92626" style="--swatch:#d92626" title="Rojo seguridad"></button>
-              <button type="button" class="color-swatch" data-color="#1d4ed8" style="--swatch:#1d4ed8" title="Azul oficial"></button>
-              <button type="button" class="color-swatch" data-color="#111827" style="--swatch:#111827" title="Negro intenso"></button>
-              <button type="button" class="color-swatch" data-color="#ffffff" style="--swatch:#ffffff; border: 1px solid #94a3b8;" title="Blanco con borde oscuro"></button>
-            </div>
-          </div>
-
-          <div class="sliders-2col">
+          <!-- Advanced Only Watermark Settings -->
+          <div id="advanced-wm-controls" class="advanced-only hidden">
+            <hr class="card-divider">
             <div class="field-group">
-              <div class="label-row">
-                <label for="wm-opacity" class="field-label">Opacidad</label>
-                <span id="opacity-val" class="val-badge">38%</span>
+              <label class="field-label">Disposición</label>
+              <div class="segmented-control">
+                <button type="button" class="seg-btn active" data-wm-mode="tiled">Mosaico</button>
+                <button type="button" class="seg-btn" data-wm-mode="single">Sello</button>
+                <button type="button" class="seg-btn" data-wm-mode="banner">Franjas</button>
               </div>
-              <input type="range" id="wm-opacity" min="12" max="85" value="38" class="slider">
             </div>
+
             <div class="field-group">
-              <div class="label-row">
-                <label for="wm-size" class="field-label">Tamaño</label>
-                <span id="size-val" class="val-badge">100%</span>
+              <label class="field-label">Color de la marca</label>
+              <div class="color-options">
+                <button type="button" class="color-swatch active" data-color="#d92626" style="--swatch:#d92626" title="Rojo"></button>
+                <button type="button" class="color-swatch" data-color="#1d4ed8" style="--swatch:#1d4ed8" title="Azul"></button>
+                <button type="button" class="color-swatch" data-color="#111827" style="--swatch:#111827" title="Negro"></button>
+                <button type="button" class="color-swatch" data-color="#ffffff" style="--swatch:#ffffff; border: 1px solid #94a3b8;" title="Blanco"></button>
               </div>
-              <input type="range" id="wm-size" min="60" max="160" value="100" class="slider">
+            </div>
+
+            <div class="sliders-2col">
+              <div class="field-group">
+                <div class="label-row">
+                  <label for="wm-opacity" class="field-label">Opacidad</label>
+                  <span id="opacity-val" class="val-badge">38%</span>
+                </div>
+                <input type="range" id="wm-opacity" min="12" max="85" value="38" class="slider">
+              </div>
+              <div class="field-group">
+                <div class="label-row">
+                  <label for="wm-size" class="field-label">Tamaño</label>
+                  <span id="size-val" class="val-badge">100%</span>
+                </div>
+                <input type="range" id="wm-size" min="60" max="160" value="100" class="slider">
+              </div>
             </div>
           </div>
         </div>
       </section>
     </aside>
-
-    <!-- Right Canvas & Export Area -->
-    <section class="stage-area">
-      <!-- Top Toolbar above Canvas -->
-      <div class="stage-toolbar">
-        <div class="toolbar-hint">
-          <span class="hint-icon">✏️</span>
-          <span><strong>Arrastra</strong> sobre la imagen para ocultar una zona · <strong>Clic</strong> en un recuadro para moverlo, cambiar su tamaño o borrarlo (<kbd>Supr</kbd>)</span>
-        </div>
-        <div class="toolbar-actions">
-          <label class="checkbox-label toggle-guides">
-            <input type="checkbox" id="show-guides" checked>
-            <span>Mostrar bordes de edición</span>
-          </label>
-        </div>
-      </div>
-
-      <!-- Interactive Canvas Container -->
-      <div class="canvas-viewport" id="drop-zone">
-        <!-- Empty State Overlay -->
-        <div class="empty-state" id="empty-state">
-          <div class="empty-card">
-            <div class="empty-icon">🪪</div>
-            <h3>Selecciona o arrastra la foto de tu DNI</h3>
-            <p>
-              Todo el procesado se realiza en la memoria de tu navegador mediante HTML5 Canvas.
-              <strong>Ninguna imagen se envía a Internet.</strong>
-            </p>
-            <div class="empty-actions">
-              <label for="file-input" class="btn btn-primary">
-                Seleccionar foto del dispositivo
-              </label>
-              <button type="button" id="btn-empty-demo" class="btn btn-secondary">
-                Ver con un DNI de ejemplo
-              </button>
-            </div>
-            <ul class="security-checklist">
-              <li>✓ Oculta Nº de Soporte, CAN y Firma para evitar suplantación</li>
-              <li>✓ Convierte a Blanco y Negro para invalidar fotocopias a color</li>
-              <li>✓ Añade texto cruzado indicando para qué trámite autorizas la copia</li>
-              <li>✓ Limpia automáticamente los metadatos EXIF / GPS al descargar</li>
-            </ul>
-          </div>
-        </div>
-
-        <!-- Canvas Wrapper -->
-        <div class="canvas-wrapper hidden" id="canvas-wrapper">
-          <canvas id="dni-canvas"></canvas>
-        </div>
-      </div>
-
-      <!-- Bottom Export Bar -->
-      <footer class="export-bar">
-        <div class="export-meta">
-          <span class="exif-badge">🛡️ Sin metadatos EXIF/GPS</span>
-          <span id="box-count-badge" class="meta-text">0 zonas ocultas</span>
-        </div>
-        <div class="export-buttons">
-          <div class="format-select-wrap">
-            <label for="export-format" class="sr-only">Formato</label>
-            <select id="export-format" class="select-input">
-              <option value="image/jpeg">Formato JPG (Ligero)</option>
-              <option value="image/png">Formato PNG (Sin pérdida)</option>
-            </select>
-          </div>
-          <button type="button" id="btn-copy-clipboard" class="btn btn-secondary" disabled>
-            Copiar imagen
-          </button>
-          <button type="button" id="btn-download" class="btn btn-primary" disabled>
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-              <polyline points="7 10 12 15 17 10"/>
-              <line x1="12" y1="15" x2="12" y2="3"/>
-            </svg>
-            Descargar DNI Protegido
-          </button>
-        </div>
-      </footer>
-    </section>
   </main>
+
+  <!-- Mobile-First Explanatory Modal / Drawer ("¿Qué es cada elemento y por qué anonimizar?") -->
+  <div id="guide-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="guide-title">
+    <div class="modal-container">
+      <header class="modal-header">
+        <div class="modal-title-wrap">
+          <span class="modal-badge">Guía de Privacidad AEPD</span>
+          <h2 id="guide-title">¿Qué datos contiene el DNI y por qué debes ocultarlos?</h2>
+        </div>
+        <button type="button" id="btn-close-guide" class="btn-close-modal" aria-label="Cerrar modal">&times;</button>
+      </header>
+
+      <div class="modal-body">
+        <div class="guide-intro-card">
+          <span class="warning-icon">⚠️</span>
+          <p>
+            Al solicitar préstamos rápidos, alquilar pisos o abrir cuentas bancarias online, los delincuentes usan fotocopias de DNI para <strong>suplantar tu identidad</strong>. La <strong>Policía Nacional</strong> y la <strong>AEPD</strong> recomiendan compartir solo los datos estrictamente necesarios.
+          </p>
+        </div>
+
+        <div class="guide-sections">
+          <!-- Item 1: Support # -->
+          <div class="guide-item high-risk" id="guide-item-soporte">
+            <div class="guide-item-header">
+              <span class="risk-pill high">Riesgo Crítico</span>
+              <h3>1. Número de Soporte (IDESP)</h3>
+            </div>
+            <p class="guide-where">📍 <strong>Dónde está:</strong> Arriba a la derecha en el anverso (ej: <code>CAA000000</code> o <code>AAA123456</code>) y en el reverso.</p>
+            <p class="guide-desc">
+              <strong>¿Para qué sirve?</strong> Es el número de serie de fabricación de la tarjeta física.
+            </p>
+            <div class="guide-why">
+              🚨 <strong>¿Por qué anonimizarlo?</strong> Es el dato que pide la <strong>Agencia Tributaria, la Seguridad Social y los bancos</strong> para validar que tienes el DNI físico en tus manos. Si un tercero lo obtiene, puede tramitar altas fraudulentas a tu nombre.
+            </div>
+          </div>
+
+          <!-- Item 2: Signature -->
+          <div class="guide-item high-risk" id="guide-item-firma">
+            <div class="guide-item-header">
+              <span class="risk-pill high">Riesgo Crítico</span>
+              <h3>2. Firma Manuscrita</h3>
+            </div>
+            <p class="guide-where">📍 <strong>Dónde está:</strong> En la parte inferior central del anverso.</p>
+            <p class="guide-desc">
+              <strong>¿Para qué sirve?</strong> Rúbrica manuscrita del titular.
+            </p>
+            <div class="guide-why">
+              🚨 <strong>¿Por qué anonimizarla?</strong> Permite a los estafadores calcarla o vectorizarla para firmar contratos de alquiler, créditos de consumo o compras a plazos en tu nombre.
+            </div>
+          </div>
+
+          <!-- Item 3: CAN Code -->
+          <div class="guide-item high-risk" id="guide-item-can">
+            <div class="guide-item-header">
+              <span class="risk-pill high">Riesgo Crítico</span>
+              <h3>3. Código CAN (Card Access Number)</h3>
+            </div>
+            <p class="guide-where">📍 <strong>Dónde está:</strong> 6 dígitos grandes en la esquina inferior derecha del anverso (ej: <code>987654</code> o <code>020631</code>).</p>
+            <p class="guide-desc">
+              <strong>¿Para qué sirve?</strong> Es la contraseña de desbloqueo para leer el chip RFID/NFC del DNI electrónico.
+            </p>
+            <div class="guide-why">
+              🚨 <strong>¿Por qué anonimizarlo?</strong> Impide que aplicaciones maliciosas con lector NFC intenten acceder a los certificados digitales de tu DNIe.
+            </div>
+          </div>
+
+          <!-- Item 4: MRZ Code -->
+          <div class="guide-item high-risk" id="guide-item-mrz">
+            <div class="guide-item-header">
+              <span class="risk-pill high">Riesgo Crítico</span>
+              <h3>4. Código MRZ (Zona de Lectura Mecánica)</h3>
+            </div>
+            <p class="guide-where">📍 <strong>Dónde está:</strong> Las 3 líneas con caracteres <code>&lt;&lt;&lt;</code> en la parte inferior del reverso.</p>
+            <p class="guide-desc">
+              <strong>¿Para qué sirve?</strong> Lectura automática en escáneres de aeropuertos y pasos fronterizos.
+            </p>
+            <div class="guide-why">
+              🚨 <strong>¿Por qué anonimizarlo?</strong> Contiene en texto plano tu número de DNI, fecha de nacimiento, validez y <strong>el número de soporte</strong> completo. Si no lo ocultas, ocultar el soporte del anverso no sirve de nada.
+            </div>
+          </div>
+
+          <!-- Item 5: Domicile -->
+          <div class="guide-item med-risk" id="guide-item-domicilio">
+            <div class="guide-item-header">
+              <span class="risk-pill med">Riesgo Medio</span>
+              <h3>5. Domicilio y Dirección de Residencia</h3>
+            </div>
+            <p class="guide-where">📍 <strong>Dónde está:</strong> Reverso, en la parte superior.</p>
+            <p class="guide-why">
+              🛡️ <strong>¿Por qué anonimizarlo?</strong> Protege tu privacidad física y la de tu familia frente a remitentes desconocidos (ej: compras de segunda mano en Wallapop o reservas).
+            </div>
+          </div>
+
+          <!-- Item 6: Parents -->
+          <div class="guide-item med-risk" id="guide-item-padres">
+            <div class="guide-item-header">
+              <span class="risk-pill med">Riesgo Medio</span>
+              <h3>6. Nombre de los Padres (Hijo/a de...)</h3>
+            </div>
+            <p class="guide-where">📍 <strong>Dónde está:</strong> Reverso, debajo del chip.</p>
+            <p class="guide-why">
+              🛡️ <strong>¿Por qué anonimizarlo?</strong> El nombre de soltera de la madre o los nombres familiares son preguntas secretas frecuentes para recuperación de cuentas bancarias y de correo.
+            </div>
+          </div>
+
+          <!-- Item 7: Validity and Birth date -->
+          <div class="guide-item low-risk" id="guide-item-validez">
+            <div class="guide-item-header">
+              <span class="risk-pill low">Recomendado</span>
+              <h3>7. Fechas de Emisión, Validez y Nacimiento</h3>
+            </div>
+            <p class="guide-where">📍 <strong>Dónde está:</strong> Centro del anverso.</p>
+            <p class="guide-why">
+              🛡️ <strong>¿Por qué anonimizarlo?</strong> Salvo que te pidan verificar mayoría de edad, no es necesario compartir la fecha exacta de nacimiento ni vigencia.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <footer class="modal-footer">
+        <button type="button" id="btn-modal-apply-aepd" class="btn btn-accent-highlight btn-full">
+          ✨ Entendido: Aplicar protección recomendada AEPD
+        </button>
+      </footer>
+    </div>
+  </div>
 
   <script src="app.js"></script>
 </body>
