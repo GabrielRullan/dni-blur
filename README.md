@@ -36,10 +36,29 @@ Diseñado siguiendo las recomendaciones oficiales de seguridad de la **Agencia E
 - **3 Disposiciones:** Mosaico diagonal repetitivo, Sello cruzado central y Franjas superior/inferior.
 - Personalización de color (rojo seguridad, azul oficial, negro, blanco), opacidad y tamaño de fuente.
 
-### 4. Exportación y compatibilidad
+### 4. Encuadre, Recorte y Giro Inteligente
+- **Recorte interactivo (Cropping):** Marco visual con regla de tercios y tiradores para eliminar el fondo de la mesa o bordes sobrantes.
+  - Proporción fija **DNI Oficial (85.6 × 53.98 mm, ISO/IEC 7810 ID-1)**, **1:1 Cuadrado** o **Libre**.
+  - Conservación no destructiva de la foto original con botón **Restaurar original**.
+- **Rotación bidireccional:** Giro 90° horario (↻) y antihorario (↺) con **transformación matemática automática de las zonas censuradas** (las cajas de censura nunca se desalinean al girar).
+- **Enderezar foto (Giro fino):** Deslizador de inclinación de -15° a +15° para corregir fotos de móvil tomadas con ligera perspectiva.
+
+### 5. Unión 2 en 1 de Anverso y Reverso (Documento Unificado)
+- **Subida dual simultánea o por caras:** Sube las dos fotos a la vez (seleccionando ambas o arrastrándolas) o cárgalas por separado en sus ranuras correspondientes.
+- **Edición independiente por cara:** Aplica censura específica al Anverso (Firma, CAN, Soporte) y al Reverso (MRZ, Domicilio) sin que una interfiera con la otra.
+- **Unión automática en una sola imagen:**
+  - **Disposición Vertical:** Anverso arriba y Reverso abajo (formato estándar de fotocopia oficial).
+  - **Disposición Horizontal:** Lado a lado.
+  - Normalización de proporciones oficiales ISO/IEC 7810 ID-1 y márgenes limpios.
+- **Seguridad unificada:** Aplica el filtro en blanco y negro y la marca de agua cruzada con fecha sobre el folio unificado completo.
+- **Descarga directa:** Descarga en JPG o PNG un único archivo listo para enviar (`DNI_Completo_Anverso_y_Reverso_...`).
+
+### 6. Animación interactiva explicativa
+- **Tutorial animado en código web:** Simulación interactiva paso a paso accesible desde el botón superior o desde `animation.html` que ilustra los peligros de enviar un DNI sin proteger (préstamos online fraudulentos, suplantación) y enseña a usar la herramienta en 7 pasos clave.
+
+### 7. Exportación y compatibilidad
 - Descarga en formatos **JPG** (ligero) o **PNG** (calidad nítida sin artefactos).
 - Botón **Copiar imagen** directo al portapapeles (`navigator.clipboard`).
-- Herramienta de rotación de imagen de 90° en 90°.
 - Drag & Drop de fotos y opción de pegar imágenes con `Ctrl+V`.
 - DNI simulado sintético integrado para probar la herramienta de inmediato sin subir un documento real.
 

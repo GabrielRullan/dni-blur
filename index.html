@@ -36,6 +36,11 @@
         </div>
       </div>
 
+      <button type="button" id="btn-open-animation" class="btn btn-ghost btn-sm btn-guide" title="Ver animación explicativa de cómo funciona y para qué sirve">
+        <span class="guide-icon">🎬</span>
+        <span class="btn-text">Cómo funciona</span>
+      </button>
+
       <button type="button" id="btn-open-guide" class="btn btn-ghost btn-sm btn-guide" title="Ver guía de elementos del DNI y por qué anonimizarlos">
         <span class="guide-icon">ℹ️</span>
         <span class="btn-text">¿Qué anonimizar?</span>
@@ -60,24 +65,74 @@
     </div>
   </div>
 
+  <!-- Crop Banner (Appears when user enters crop mode) -->
+  <div id="crop-bar" class="crop-bar hidden">
+    <div class="crop-bar-content">
+      <span class="crop-badge">✂️ Recorte</span>
+      <span class="crop-instruction" id="crop-instruction">Ajusta el marco arrastrando esquinas o el centro</span>
+      <div class="crop-ratio-group" role="radiogroup" aria-label="Proporción de recorte">
+        <button type="button" class="btn-crop-ratio active" data-ratio="dni" title="Proporción estándar DNI (85.6 × 53.98 mm)">DNI Oficial</button>
+        <button type="button" class="btn-crop-ratio" data-ratio="free" title="Proporción libre y personalizada">Libre</button>
+        <button type="button" class="btn-crop-ratio" data-ratio="1:1" title="Cuadrado 1:1">1:1</button>
+      </div>
+    </div>
+    <div class="crop-bar-actions">
+      <button type="button" id="btn-cancel-crop" class="btn btn-ghost btn-sm">Cancelar</button>
+      <button type="button" id="btn-reset-crop-box" class="btn btn-ghost btn-sm" title="Restablecer marco a tamaño completo">Centrar marco</button>
+      <button type="button" id="btn-apply-crop" class="btn btn-primary btn-sm">✓ Aplicar recorte</button>
+    </div>
+  </div>
+
   <!-- Main Workspace (Mobile First) -->
   <main class="workspace">
     <!-- Canvas / Preview Stage (Prominent on Mobile) -->
     <section class="stage-area">
       <!-- Toolbar above canvas -->
       <div class="stage-toolbar">
-        <div class="toolbar-hint" id="toolbar-hint">
-          <span class="hint-icon">👆</span>
-          <span id="hint-text"><strong>Arrastra</strong> para crear una zona oculta · <strong>Toca</strong> para mover o ajustar</span>
+        <div class="stage-toolbar-left">
+          <div class="face-switcher-bar" role="tablist" aria-label="Seleccionar cara del documento">
+            <button type="button" class="face-tab-btn active" data-view-side="front" role="tab" aria-selected="true" title="Ver y editar anverso del DNI">
+              🪪 Anverso
+            </button>
+            <button type="button" class="face-tab-btn" data-view-side="back" role="tab" aria-selected="false" title="Ver y editar reverso del DNI">
+              🔄 Reverso
+            </button>
+            <button type="button" class="face-tab-btn" data-view-side="both" id="tab-btn-both" role="tab" aria-selected="false" title="Ver ambas caras unidas en una sola imagen">
+              📄 Unión (2 en 1)
+            </button>
+          </div>
+          <div class="toolbar-hint" id="toolbar-hint">
+            <span id="hint-text"><strong>Arrastra</strong> para crear una zona oculta · <strong>Toca</strong> para mover o ajustar</span>
+          </div>
         </div>
+
         <div class="stage-quick-actions">
-          <button type="button" id="btn-rotate" class="btn btn-ghost btn-icon" title="Rotar imagen 90°">
+          <!-- Merge layout selector (visible when in both mode) -->
+          <div class="merge-layout-pills hidden" id="merge-layout-pills">
+            <button type="button" class="btn btn-ghost btn-sm active" data-merge-layout="vertical" title="Anverso arriba, Reverso abajo">Vertical</button>
+            <button type="button" class="btn btn-ghost btn-sm" data-merge-layout="horizontal" title="Lado a lado">Horizontal</button>
+          </div>
+
+          <button type="button" id="btn-crop-toggle" class="btn btn-ghost btn-sm" title="Recortar y encuadrar imagen del DNI">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M6 2v14a2 2 0 0 0 2 2h14"/>
+              <path d="M18 22V8a2 2 0 0 0-2-2H2"/>
+            </svg>
+            <span>Recortar</span>
+          </button>
+          <button type="button" id="btn-rotate-left" class="btn btn-ghost btn-icon" title="Rotar 90° a la izquierda (antihorario)">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/>
+              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+              <path d="M3 3v5h5"/>
+            </svg>
+          </button>
+          <button type="button" id="btn-rotate-right" class="btn btn-ghost btn-icon" title="Rotar 90° a la derecha (horario)">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 12a9 9 0 1 1-9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
               <path d="M21 3v5h-5"/>
             </svg>
           </button>
-          <label class="checkbox-label toggle-guides">
+          <label class="checkbox-label toggle-guides" id="guides-toggle-wrap">
             <input type="checkbox" id="show-guides" checked>
             <span>Guías</span>
           </label>
@@ -103,8 +158,9 @@
                   <polyline points="17 8 12 3 7 8"/>
                   <line x1="12" y1="3" x2="12" y2="15"/>
                 </svg>
-                Seleccionar foto de DNI
+                Seleccionar foto(s) de DNI
               </label>
+              <p class="empty-subtext">Puedes elegir 1 foto o seleccionar Anverso y Reverso juntos a la vez</p>
             </div>
 
             <div class="demo-select-box">
@@ -112,13 +168,26 @@
               <div class="demo-cards-row">
                 <button type="button" id="btn-demo-front-thumb" class="demo-thumb-btn">
                   <img src="Spanish_ID_card_(front_side).webp" alt="DNI Anverso Carmen" class="thumb-img">
-                  <span>Anverso Carmen</span>
+                  <span>Anverso</span>
                 </button>
                 <button type="button" id="btn-demo-back-thumb" class="demo-thumb-btn">
                   <img src="back.jpg" alt="DNI Reverso Carmen" class="thumb-img">
-                  <span>Reverso Carmen</span>
+                  <span>Reverso</span>
+                </button>
+                <button type="button" id="btn-demo-both-thumb" class="demo-thumb-btn demo-thumb-featured">
+                  <div class="dual-thumb-wrap">
+                    <img src="Spanish_ID_card_(front_side).webp" alt="Anverso" class="thumb-mini">
+                    <img src="back.jpg" alt="Reverso" class="thumb-mini">
+                  </div>
+                  <span>✨ Ambos (2 en 1)</span>
                 </button>
               </div>
+            </div>
+
+            <div class="animation-cta-wrap">
+              <button type="button" id="btn-empty-animation" class="btn btn-outline-accent btn-sm btn-full" title="Ver animación explicativa de uso y seguridad">
+                🎬 Ver cómo funciona (Animación interactiva)
+              </button>
             </div>
 
             <ul class="security-checklist">
@@ -140,6 +209,7 @@
       <footer class="export-bar">
         <div class="export-meta">
           <span class="exif-badge">🛡️ Sin EXIF/GPS</span>
+          <span id="export-target-badge" class="target-side-pill">Anverso</span>
           <span id="box-count-badge" class="meta-text">0 zonas ocultas</span>
         </div>
         <div class="export-buttons">
@@ -158,7 +228,7 @@
               <polyline points="7 10 12 15 17 10"/>
               <line x1="12" y1="15" x2="12" y2="3"/>
             </svg>
-            Descargar
+            <span id="btn-download-text">Descargar</span>
           </button>
         </div>
       </footer>
@@ -166,23 +236,81 @@
 
     <!-- Controls Panel -->
     <aside class="controls-panel">
-      <!-- Section 0: Document & Calibration -->
+      <!-- Section 0: Document, Sides & Framing -->
       <section class="control-card">
         <div class="card-header">
           <span class="step-badge">0</span>
-          <h2>Documento y Calibración</h2>
+          <h2>Documento y Caras</h2>
         </div>
         <div class="file-actions">
-          <label for="file-input" class="btn btn-secondary btn-full">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-              <polyline points="17 8 12 3 7 8"/>
-              <line x1="12" y1="3" x2="12" y2="15"/>
-            </svg>
-            Cambiar imagen
-          </label>
-          <input type="file" id="file-input" accept="image/*" hidden>
+          <!-- Face selector segments in panel -->
+          <div class="segmented-control panel-side-segments" role="tablist">
+            <button type="button" class="seg-btn active" data-side="front">🪪 Anverso</button>
+            <button type="button" class="seg-btn" data-side="back">🔄 Reverso</button>
+            <button type="button" class="seg-btn" data-side="both" id="panel-btn-both">📄 Unión (2 en 1)</button>
+          </div>
 
+          <!-- Dual Sides Slots Grid -->
+          <div class="sides-slots-grid">
+            <!-- Front Card Slot -->
+            <div class="side-slot-card active" id="slot-card-front">
+              <div class="slot-info">
+                <div class="slot-badge-title">
+                  <span class="slot-icon">🪪</span>
+                  <strong>Anverso</strong>
+                </div>
+                <span class="slot-status-tag" id="status-tag-front">Sin foto</span>
+              </div>
+              <div class="slot-actions">
+                <label for="file-input-front" class="btn btn-secondary btn-sm" id="btn-label-front">
+                  Subir
+                </label>
+                <button type="button" class="btn btn-ghost btn-sm hidden" id="btn-clear-front" title="Eliminar foto del anverso">&times;</button>
+              </div>
+            </div>
+
+            <!-- Back Card Slot -->
+            <div class="side-slot-card" id="slot-card-back">
+              <div class="slot-info">
+                <div class="slot-badge-title">
+                  <span class="slot-icon">🔄</span>
+                  <strong>Reverso</strong>
+                </div>
+                <span class="slot-status-tag" id="status-tag-back">Sin foto</span>
+              </div>
+              <div class="slot-actions">
+                <label for="file-input-back" class="btn btn-secondary btn-sm" id="btn-label-back">
+                  Subir
+                </label>
+                <button type="button" class="btn btn-ghost btn-sm hidden" id="btn-clear-back" title="Eliminar foto del reverso">&times;</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- General file upload input (supports multiple) -->
+          <label for="file-input" class="btn btn-outline-accent btn-sm btn-full" title="Puedes elegir 1 foto o seleccionar las dos a la vez">
+            📁 Subir imagen(es) de tu DNI
+          </label>
+          <input type="file" id="file-input" accept="image/*" multiple hidden>
+          <input type="file" id="file-input-front" accept="image/*" hidden>
+          <input type="file" id="file-input-back" accept="image/*" hidden>
+
+          <!-- Merge Arrangement Options (Visible when in union mode or both images present) -->
+          <div class="merge-options-box hidden" id="merge-options-box">
+            <div class="label-row">
+              <label class="field-label">Disposición de unión (2 en 1)</label>
+            </div>
+            <div class="segmented-control" id="merge-layout-segments">
+              <button type="button" class="seg-btn active" data-merge-layout="vertical" title="Anverso arriba, Reverso abajo (Estándar español)">
+                ⬇️ Vertical
+              </button>
+              <button type="button" class="seg-btn" data-merge-layout="horizontal" title="Anverso izquierda, Reverso derecha">
+                ➡️ Horizontal
+              </button>
+            </div>
+          </div>
+
+          <!-- Demo Buttons -->
           <div class="demo-row">
             <button type="button" id="btn-demo-front" class="btn btn-ghost btn-sm" title="Cargar foto DNI Anverso real Carmen">
               Anverso Demo
@@ -191,13 +319,51 @@
               Reverso Demo
             </button>
           </div>
+          <button type="button" id="btn-demo-both" class="btn btn-accent-highlight btn-sm btn-full" title="Cargar y unir ambas caras de Carmen en una sola imagen">
+            ✨ Cargar DNI Completo Demo (Ambas Caras Unidas)
+          </button>
 
-          <!-- Alignment / Calibration Helper Button -->
-          <div class="calib-trigger-box">
-            <button type="button" id="btn-start-calibration" class="btn btn-outline-accent btn-sm">
-              🎯 Ajustar esquinas del DNI (Mejora plantillas)
-            </button>
-            <p class="micro-help">Si tu foto tiene bordes o fondo, marca 2 esquinas para alinear perfectamente los datos.</p>
+          <!-- Document Framing & Geometry Tools (Applies to active side) -->
+          <div class="doc-tools-box" id="doc-tools-box">
+            <div class="label-row">
+              <span class="field-label" id="framing-target-label">Ajustes para: <strong>Anverso</strong></span>
+            </div>
+            <div class="doc-tools-row">
+              <button type="button" id="btn-panel-crop" class="btn btn-outline-accent btn-sm" style="flex: 1;" title="Recortar y ajustar bordes">
+                ✂️ Recortar bordes
+              </button>
+              <button type="button" id="btn-restore-original" class="btn btn-ghost btn-sm hidden" style="flex: 1;" title="Restablecer a la foto original sin recortar">
+                ↺ Restaurar orig.
+              </button>
+            </div>
+
+            <div class="doc-tools-row">
+              <button type="button" id="btn-panel-rot-left" class="btn btn-ghost btn-sm" style="flex: 1;" title="Rotar 90° hacia la izquierda">
+                ↺ Girar -90°
+              </button>
+              <button type="button" id="btn-panel-rot-right" class="btn btn-ghost btn-sm" style="flex: 1;" title="Rotar 90° hacia la derecha">
+                ↻ Girar +90°
+              </button>
+            </div>
+
+            <div class="field-group straighten-group">
+              <div class="label-row">
+                <label for="straighten-slider" class="field-label">Enderezar foto (inclinación)</label>
+                <div class="val-reset-wrap">
+                  <span id="straighten-val" class="val-badge">0°</span>
+                  <button type="button" id="btn-reset-straighten" class="btn-micro-reset" title="Restablecer giro a 0°">0°</button>
+                </div>
+              </div>
+              <input type="range" id="straighten-slider" min="-15" max="15" value="0" step="0.5" class="slider">
+            </div>
+
+            <!-- Alignment / Calibration Helper Button -->
+            <div class="calib-trigger-box">
+              <button type="button" id="btn-start-calibration" class="btn btn-ghost btn-sm">
+                🎯 Calibrar esquinas (Alinear plantillas)
+              </button>
+              <p class="micro-help">Si tu foto tiene bordes o fondo, marca 2 esquinas para alinear perfectamente los datos.</p>
+            </div>
           </div>
         </div>
       </section>
@@ -539,6 +705,155 @@
       <footer class="modal-footer">
         <button type="button" id="btn-modal-apply-aepd" class="btn btn-accent-highlight btn-full">
           ✨ Entendido: Aplicar protección recomendada AEPD
+        </button>
+      </footer>
+    </div>
+  </div>
+
+  <!-- Interactive Code Animation Modal ("¿Para qué sirve y cómo usar ProtegeDNI?") -->
+  <div id="animation-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="anim-modal-title">
+    <div class="modal-container anim-modal-container">
+      <header class="modal-header">
+        <div class="modal-title-wrap">
+          <span class="modal-badge anim-badge">Animación Interactiva</span>
+          <h2 id="anim-modal-title">¿Para qué sirve y cómo usar ProtegeDNI?</h2>
+        </div>
+        <button type="button" id="btn-close-animation" class="btn-close-modal" aria-label="Cerrar modal">&times;</button>
+      </header>
+
+      <div class="modal-body anim-modal-body">
+        <!-- Interactive Step Timeline Bar -->
+        <nav class="anim-timeline-nav" aria-label="Pasos de la animación">
+          <button type="button" class="anim-step-chip active" data-step="0">1. El Peligro</button>
+          <button type="button" class="anim-step-chip" data-step="1">2. 100% Local</button>
+          <button type="button" class="anim-step-chip" data-step="2">3. Recorte & Giro</button>
+          <button type="button" class="anim-step-chip" data-step="3">4. Censura AEPD</button>
+          <button type="button" class="anim-step-chip" data-step="4">5. Blanco & Negro</button>
+          <button type="button" class="anim-step-chip" data-step="5">6. Marca de Agua</button>
+          <button type="button" class="anim-step-chip" data-step="6">7. Exportación</button>
+        </nav>
+
+        <!-- Animation Screen / Stage -->
+        <div class="anim-stage-card" id="anim-stage">
+          <div class="anim-card-canvas-wrap">
+            <!-- Simulated Animated DNI Card Graphic -->
+            <div class="anim-dni-card" id="anim-dni-card">
+              <!-- Background / Border -->
+              <div class="anim-dni-bg"></div>
+
+              <!-- DNI Content Elements -->
+              <div class="anim-dni-header">
+                <span class="anim-flag">🇪🇸</span>
+                <span class="anim-dni-title">ESPAÑA · DOCUMENTO NACIONAL DE IDENTIDAD</span>
+              </div>
+
+              <div class="anim-dni-body">
+                <div class="anim-photo-box" id="anim-photo">
+                  <div class="anim-avatar">👤</div>
+                  <span class="anim-photo-label">FOTO TITULAR</span>
+                </div>
+
+                <div class="anim-data-fields">
+                  <div class="anim-field">
+                    <span class="anim-label">PRIMER APELLIDO:</span>
+                    <span class="anim-value">GARCÍA</span>
+                  </div>
+                  <div class="anim-field">
+                    <span class="anim-label">SEGUNDO APELLIDO:</span>
+                    <span class="anim-value">LÓPEZ</span>
+                  </div>
+                  <div class="anim-field">
+                    <span class="anim-label">NOMBRE:</span>
+                    <span class="anim-value">CARMEN</span>
+                  </div>
+                  <div class="anim-field">
+                    <span class="anim-label">DNI / NIF:</span>
+                    <span class="anim-value">12345678Z</span>
+                  </div>
+                </div>
+
+                <!-- Critical Sensitive Target: IDESP / Soporte -->
+                <div class="anim-target-zone" id="anim-zone-soporte" data-tip="Nº Soporte: Usado por bancos para préstamos">
+                  <span class="anim-zone-text">NUM SOPORTE: <strong>AAA123456</strong></span>
+                  <span class="anim-alert-badge">⚠️ Soporte</span>
+                </div>
+
+                <!-- Critical Sensitive Target: Signature -->
+                <div class="anim-target-zone" id="anim-zone-firma" data-tip="Firma: Falsificación en contratos de alquiler">
+                  <span class="anim-zone-text anim-sig-font">Carmen García</span>
+                  <span class="anim-alert-badge">⚠️ Firma</span>
+                </div>
+
+                <!-- Critical Sensitive Target: CAN -->
+                <div class="anim-target-zone" id="anim-zone-can" data-tip="CAN: Llave de acceso NFC del chip">
+                  <span class="anim-zone-text">CAN: <strong>987654</strong></span>
+                  <span class="anim-alert-badge">⚠️ CAN</span>
+                </div>
+              </div>
+
+              <!-- Animated Crop Overlay -->
+              <div class="anim-crop-frame hidden" id="anim-crop-frame">
+                <div class="anim-crop-bracket tl"></div>
+                <div class="anim-crop-bracket tr"></div>
+                <div class="anim-crop-bracket br"></div>
+                <div class="anim-crop-bracket bl"></div>
+                <span class="anim-crop-tag">✂️ 85.6 × 54 mm</span>
+              </div>
+
+              <!-- Animated Watermark Layer -->
+              <div class="anim-watermark-layer hidden" id="anim-watermark-layer">
+                <div class="anim-wm-stamp">
+                  USO EXCLUSIVO ALQUILER · COPIA PROTEGIDA
+                </div>
+              </div>
+
+              <!-- Animated Success Shield -->
+              <div class="anim-success-shield hidden" id="anim-success-shield">
+                <span class="anim-shield-icon">🛡️</span>
+                <span class="anim-shield-text">¡DNI 100% PROTEGIDO!</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step Description Narrative Box -->
+          <div class="anim-narrative-box">
+            <div class="anim-step-badge" id="anim-step-num">Paso 1 de 7</div>
+            <h3 class="anim-step-title" id="anim-step-heading">El Peligro: ¿Por qué NUNCA enviar tu DNI sin proteger?</h3>
+            <p class="anim-step-desc" id="anim-step-text">
+              Al alquilar un piso, reservar hotel o hacer trámites online, te piden copia del DNI. Si cae en manos de ciberdelincuentes, usan el <strong>Nº de Soporte, Firma y CAN</strong> para pedir créditos rápidos o suplantar tu identidad.
+            </p>
+          </div>
+        </div>
+
+        <!-- Animation Player Controls Bar -->
+        <div class="anim-player-bar">
+          <div class="anim-controls-left">
+            <button type="button" id="btn-anim-play" class="btn btn-primary btn-sm btn-anim-ctrl" title="Reproducir / Pausar">
+              <span id="anim-play-icon">▶</span>
+              <span id="anim-play-text">Reproducir</span>
+            </button>
+            <button type="button" id="btn-anim-prev" class="btn btn-ghost btn-sm btn-icon" title="Paso anterior">⏮</button>
+            <button type="button" id="btn-anim-next" class="btn btn-ghost btn-sm btn-icon" title="Paso siguiente">⏭</button>
+            <button type="button" id="btn-anim-restart" class="btn btn-ghost btn-sm btn-icon" title="Reiniciar desde el inicio">↺</button>
+          </div>
+
+          <!-- Progress scrubber -->
+          <div class="anim-progress-track">
+            <div class="anim-progress-fill" id="anim-progress-bar" style="width: 14%;"></div>
+          </div>
+
+          <div class="anim-controls-right">
+            <button type="button" id="btn-anim-speed" class="btn btn-ghost btn-sm" title="Cambiar velocidad">1x</button>
+          </div>
+        </div>
+      </div>
+
+      <footer class="modal-footer anim-modal-footer">
+        <button type="button" id="btn-anim-try-demo" class="btn btn-accent-highlight">
+          🚀 ¡Probar ahora con DNI de ejemplo!
+        </button>
+        <button type="button" id="btn-anim-close-bottom" class="btn btn-secondary">
+          Cerrar
         </button>
       </footer>
     </div>
