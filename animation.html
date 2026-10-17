@@ -44,7 +44,7 @@
               Tutorial Interactivo
             </span>
           </div>
-          <p class="text-xs text-slate-400">Guía oficial de anonimización según Policía Nacional y AEPD</p>
+          <p class="text-xs text-slate-400">Guía oficial de protección de DNI según Policía Nacional y AEPD</p>
         </div>
       </div>
       
@@ -55,7 +55,7 @@
         </a>
         <div class="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
           <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-          <span>100% Local</span>
+          <span>🔒 100% Privado</span>
         </div>
       </div>
     </header>
@@ -64,9 +64,9 @@
     <div class="px-3 pt-3 pb-1 bg-slate-800/90 border-b border-slate-700/60 overflow-x-auto">
       <div class="flex gap-1.5 min-w-max pb-1" id="step-chips-container">
         <button type="button" class="step-chip text-xs font-semibold px-2.5 py-1 rounded-full border transition-all" data-step="0">1. El Peligro</button>
-        <button type="button" class="step-chip text-xs font-semibold px-2.5 py-1 rounded-full border transition-all" data-step="1">2. 100% Local</button>
+        <button type="button" class="step-chip text-xs font-semibold px-2.5 py-1 rounded-full border transition-all" data-step="1">2. 100% Privado</button>
         <button type="button" class="step-chip text-xs font-semibold px-2.5 py-1 rounded-full border transition-all" data-step="2">3. Recorte & Giro</button>
-        <button type="button" class="step-chip text-xs font-semibold px-2.5 py-1 rounded-full border transition-all" data-step="3">4. Censura AEPD</button>
+        <button type="button" class="step-chip text-xs font-semibold px-2.5 py-1 rounded-full border transition-all" data-step="3">4. Datos Clave (AEPD)</button>
         <button type="button" class="step-chip text-xs font-semibold px-2.5 py-1 rounded-full border transition-all" data-step="4">5. Blanco & Negro</button>
         <button type="button" class="step-chip text-xs font-semibold px-2.5 py-1 rounded-full border transition-all" data-step="5">6. Marca de Agua</button>
         <button type="button" class="step-chip text-xs font-semibold px-2.5 py-1 rounded-full border transition-all" data-step="6">7. Exportación</button>
@@ -130,7 +130,7 @@
           <div class="absolute -bottom-1.5 -left-1.5 w-3 h-3 bg-blue-600 border border-white rounded-sm"></div>
           <div class="absolute -bottom-1.5 -right-1.5 w-3 h-3 bg-blue-600 border border-white rounded-sm"></div>
           <span class="absolute bottom-1 right-1 bg-blue-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow">
-            ✂️ 85.6 × 54 mm
+            ✂️ Proporción oficial
           </span>
         </div>
 
@@ -145,7 +145,7 @@
         <div id="success-shield" class="hidden absolute inset-0 bg-emerald-600/90 text-white flex flex-col items-center justify-center gap-1.5 transition-all">
           <span class="text-5xl drop-shadow-md">🛡️</span>
           <span class="text-lg font-extrabold tracking-wider drop-shadow-sm">¡100% PROTEGIDO!</span>
-          <span class="text-xs opacity-90">Sin EXIF · Sin datos bancarios · Con finalidad única</span>
+          <span class="text-xs opacity-90">Datos GPS y cámara eliminados · Sin datos bancarios · Con finalidad única</span>
         </div>
       </div>
     </div>
@@ -238,8 +238,8 @@
       },
       {
         num: 'Paso 2 de 7',
-        title: '2. 100% On-Device: Nada sale de tu navegador',
-        desc: 'ProtegeDNI procesa tu documento <strong>enteramente en la memoria RAM</strong> de tu móvil u ordenador mediante HTML5 Canvas. Ninguna imagen viaja a la nube ni a ningún servidor. Además, se eliminan metadatos EXIF y GPS automáticamente.',
+        title: '2. 100% Privado: Nada sale de tu navegador',
+        desc: 'ProtegeDNI procesa tu documento <strong>en tu propio móvil u ordenador</strong> mediante HTML5 Canvas. Ninguna imagen viaja a la nube ni a ningún servidor. Además, se eliminan los datos de ubicación GPS y cámara automáticamente.',
         apply: () => {
           dniCard.style.transform = 'none';
           dniCard.style.filter = 'none';
@@ -256,7 +256,7 @@
       {
         num: 'Paso 3 de 7',
         title: '3. Recortar y Rotar: Encuadre perfecto al DNI',
-        desc: 'Las fotos tomadas con el móvil suelen tener bordes de la mesa y estar ligeramente inclinadas. Usa las herramientas de <strong>Giro 90°</strong>, el slider de <strong>Enderezar</strong> y el marco de <strong>Recorte con proporción oficial DNI (85.6 × 54 mm)</strong> para eliminar el fondo.',
+        desc: 'Las fotos tomadas con el móvil suelen tener bordes de la mesa y estar ligeramente inclinadas. Usa las herramientas de <strong>Giro 90°</strong>, el slider de <strong>Enderezar</strong> y el marco de <strong>Recorte con proporción oficial del DNI</strong> para eliminar el fondo.',
         apply: () => {
           dniCard.style.transform = 'rotate(-3deg) scale(0.96)';
           dniCard.style.filter = 'none';
@@ -272,8 +272,8 @@
       },
       {
         num: 'Paso 4 de 7',
-        title: '4. Censura AEPD: Ocultación de campos críticos',
-        desc: 'Con 1 solo clic o arrastrando manualmente, aplica la recomendación oficial de la <strong>AEPD y Policía Nacional</strong>: pixelado, desenfoque o bloqueo negro sobre la Firma manuscrita, el Código CAN y el Nº de Soporte / IDESP.',
+        title: '4. Datos Clave (AEPD): Ocultación de campos críticos',
+        desc: 'Con 1 solo clic o arrastrando manualmente, aplica la recomendación oficial de la <strong>AEPD y Policía Nacional</strong>: ocultación sobre la Firma manuscrita, la Clave CAN y el Número de la tarjeta física (Soporte / IDESP).',
         apply: () => {
           dniCard.style.transform = 'none';
           dniCard.style.filter = 'none';
@@ -289,8 +289,8 @@
       },
       {
         num: 'Paso 5 de 7',
-        title: '5. Filtro Blanco y Negro: Neutraliza copias fraudulentas',
-        desc: 'Convierte el documento a escala de grises con fórmula perceptual ITU-R BT.601 y realce de contraste. Esto <strong>invalida la copia como documento original a color</strong> para altas bancarias o verificaciones KYC automáticas.',
+        title: '5. Convertir a Blanco y Negro: Neutraliza copias fraudulentas',
+        desc: 'Convierte el documento a escala de grises recomendada por la Policía. Esto <strong>invalida la copia como documento original a color</strong> para verificación de identidad bancaria y financiera (KYC) fraudulenta.',
         apply: () => {
           dniCard.style.transform = 'none';
           dniCard.style.filter = 'grayscale(100%) contrast(125%)';

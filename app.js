@@ -244,19 +244,37 @@ if (currentDatePreview) {
 // Preset definitions (Normalized 0..1 bounding boxes based on standard Spanish DNI 3.0 / 4.0 layout)
 const PRESETS = {
   // Front of DNI (Reino de España Specimen layout)
-  firma: { x: 0.43, y: 0.74, width: 0.31, height: 0.16, label: 'Firma' },
-  can: { x: 0.75, y: 0.79, width: 0.22, height: 0.13, label: 'Código CAN' },
-  soporte: { x: 0.39, y: 0.65, width: 0.25, height: 0.10, label: 'Nº Soporte' },
+  firma: { x: 0.43, y: 0.74, width: 0.31, height: 0.16, label: 'Firma manuscrita' },
+  can: { x: 0.75, y: 0.79, width: 0.22, height: 0.13, label: 'Clave CAN' },
+  soporte: { x: 0.39, y: 0.65, width: 0.25, height: 0.10, label: 'Nº Soporte / IDESP' },
   validez: { x: 0.57, y: 0.57, width: 0.19, height: 0.08, label: 'Validez' },
   nacimiento: { x: 0.77, y: 0.48, width: 0.19, height: 0.08, label: 'Fecha Nac.' },
-  foto_extra: { x: 0.81, y: 0.58, width: 0.15, height: 0.20, label: 'Foto sec.' },
+  foto_extra: { x: 0.81, y: 0.58, width: 0.15, height: 0.20, label: 'Foto secundaria' },
   
   // Back of DNI
-  mrz: { x: 0.04, y: 0.64, width: 0.92, height: 0.31, label: 'MRZ (Lectura)' },
-  domicilio: { x: 0.28, y: 0.06, width: 0.38, height: 0.23, label: 'Domicilio' },
+  mrz: { x: 0.04, y: 0.64, width: 0.92, height: 0.31, label: 'Líneas lectura <<<' },
+  domicilio: { x: 0.28, y: 0.06, width: 0.38, height: 0.23, label: 'Dirección (Domicilio)' },
   padres: { x: 0.28, y: 0.48, width: 0.34, height: 0.12, label: 'Nombre Padres' },
   lugar_nac: { x: 0.28, y: 0.31, width: 0.30, height: 0.15, label: 'Lugar Nac.' }
 };
+
+// Accessible Toast Notification Helper
+function showToast(message, type = 'info') {
+  const container = document.getElementById('toast-container');
+  if (!container) return;
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  toast.setAttribute('role', 'alert');
+  toast.textContent = message;
+  container.appendChild(toast);
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateY(10px) scale(0.96)';
+    setTimeout(() => {
+      if (toast.parentNode) toast.parentNode.removeChild(toast);
+    }, 250);
+  }, 3200);
+}
 
 // --- INITIALIZATION ---
 function init() {
@@ -314,6 +332,12 @@ function saveCurrentSideState() {
   if (state.currentSide === 'both') return;
   const s = state.sides[state.currentSide];
   if (!s) return;
+
+  // Protect against cold-start wipe: if state.img is null but side container already has an image, do not overwrite with null
+  if (state.img === null && s.img !== null) {
+    return;
+  }
+
   s.img = state.img;
   s.imgOrientation = state.imgOrientation;
   s.fineRotation = state.fineRotation;
@@ -325,11 +349,11 @@ function saveCurrentSideState() {
 }
 
 // Switch between Front ('front'), Back ('back') and Union ('both')
-function switchSide(newSide) {
-  if (state.currentSide === newSide) return;
+function switchSide(newSide, force = false) {
+  if (state.currentSide === newSide && !force) return;
 
-  // 1. If currently in single-side editing, persist changes
-  if (state.currentSide === 'front' || state.currentSide === 'back') {
+  // 1. If currently in single-side editing, persist changes (unless forcing reload of the same side)
+  if ((state.currentSide === 'front' || state.currentSide === 'back') && (!force || state.currentSide !== newSide)) {
     saveCurrentSideState();
     if (state.crop.active) exitCropMode();
     if (state.calibration.active) cancelCalibration();
@@ -497,7 +521,7 @@ function updateSideUI() {
 // Load a single image file into a specific side
 function loadSideFile(file, side, callback) {
   if (!file || !file.type.startsWith('image/')) {
-    alert('Por favor selecciona un archivo de imagen válido.');
+    showToast('Por favor selecciona un archivo de imagen válido (JPG, PNG o WebP).', 'warning');
     return;
   }
   const reader = new FileReader();
@@ -757,7 +781,7 @@ function setupControls() {
       }
 
       if (!state.img) {
-        alert('Carga primero una imagen para esta cara o usa la demo.');
+        showToast('Carga primero una foto para esta cara o prueba con el ejemplo.', 'info');
         return;
       }
       togglePresetBox(key, def);
@@ -780,7 +804,7 @@ function setupControls() {
       const front = state.sides.front;
       const back = state.sides.back;
       if (!front.img && !back.img) {
-        alert('Carga al menos una imagen de DNI.');
+        showToast('Carga al menos una foto de tu DNI para proteger ambas caras.', 'info');
         return;
       }
       const recFront = ['soporte', 'firma', 'can'];
@@ -807,7 +831,7 @@ function setupControls() {
     }
 
     if (!state.img) {
-      alert('Carga primero una imagen de DNI.');
+      showToast('ℹ️ Primero sube una foto de tu DNI para poder protegerla.', 'info');
       return;
     }
     
@@ -899,8 +923,13 @@ function setupControls() {
   // Quick tags
   document.querySelectorAll('.tag-btn').forEach(btn => {
     btn.addEventListener('click', () => {
+      document.querySelectorAll('.tag-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
       state.wmText = btn.dataset.text;
       wmTextInput.value = state.wmText;
+      if (state.appMode === 'simple' && state.img && state.boxes.length === 0) {
+        applyRecommended();
+      }
       render();
     });
   });
@@ -971,6 +1000,15 @@ function setupControls() {
   btnDownload.addEventListener('click', downloadProtectedImage);
   btnCopyClipboard.addEventListener('click', copyToClipboard);
 
+  const btnStep3Download = document.getElementById('btn-step3-download');
+  const btnStep3Copy = document.getElementById('btn-step3-copy');
+  if (btnStep3Download) {
+    btnStep3Download.addEventListener('click', downloadProtectedImage);
+  }
+  if (btnStep3Copy) {
+    btnStep3Copy.addEventListener('click', copyToClipboard);
+  }
+
   // Keyboard shortcuts
   window.addEventListener('keydown', (e) => {
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
@@ -1001,6 +1039,10 @@ function setupControls() {
 function updateExportButtons(enabled) {
   btnDownload.disabled = !enabled;
   btnCopyClipboard.disabled = !enabled;
+  const btnStep3Download = document.getElementById('btn-step3-download');
+  const btnStep3Copy = document.getElementById('btn-step3-copy');
+  if (btnStep3Download) btnStep3Download.disabled = !enabled;
+  if (btnStep3Copy) btnStep3Copy.disabled = !enabled;
 }
 
 function updateBoxBadge() {
@@ -1118,7 +1160,7 @@ function deleteSelectedBox() {
 function setupCalibration() {
   btnStartCalibration.addEventListener('click', () => {
     if (!state.img) {
-      alert('Carga primero una imagen de DNI para calibrar.');
+      showToast('Carga primero una foto de tu DNI para calibrar esquinas.', 'info');
       return;
     }
     startCalibration();
@@ -1224,7 +1266,7 @@ function loadDemoSide(imagePath, side) {
       ];
     }
 
-    switchSide(side);
+    switchSide(side, true);
   };
   img.src = imagePath;
 }
@@ -1265,6 +1307,10 @@ function loadDemoBoth() {
       createPresetBoxData(PRESETS.mrz, 'mrz'),
       createPresetBoxData(PRESETS.domicilio, 'domicilio')
     ];
+
+    // Synchronize active editing state with front card before switching to union view
+    state.img = frontImg;
+    state.boxes = [...state.sides.front.boxes];
 
     // 3. Switch directly to union view
     switchSide('both');
@@ -1863,9 +1909,13 @@ function drawEditorGuides(width, height) {
 
     // Corner handles if selected
     if (isSelected) {
+      const rect = canvas.getBoundingClientRect();
+      const scaleFactor = (rect && rect.width > 0) ? (canvas.width / rect.width) : 1;
+      const curHandleSize = Math.max(12, Math.ceil(14 * scaleFactor));
+
       ctx.fillStyle = '#ffffff';
       ctx.strokeStyle = '#2563eb';
-      ctx.lineWidth = 2;
+      ctx.lineWidth = Math.max(2, Math.round(2 * scaleFactor));
       ctx.setLineDash([]);
 
       const corners = [
@@ -1876,8 +1926,8 @@ function drawEditorGuides(width, height) {
       ];
 
       corners.forEach(pt => {
-        ctx.fillRect(pt.x - HANDLE_SIZE / 2, pt.y - HANDLE_SIZE / 2, HANDLE_SIZE, HANDLE_SIZE);
-        ctx.strokeRect(pt.x - HANDLE_SIZE / 2, pt.y - HANDLE_SIZE / 2, HANDLE_SIZE, HANDLE_SIZE);
+        ctx.fillRect(pt.x - curHandleSize / 2, pt.y - curHandleSize / 2, curHandleSize, curHandleSize);
+        ctx.strokeRect(pt.x - curHandleSize / 2, pt.y - curHandleSize / 2, curHandleSize, curHandleSize);
       });
     }
 
@@ -1923,7 +1973,9 @@ function setupCanvasEvents() {
     const by = box.y * h;
     const bw = box.width * w;
     const bh = box.height * h;
-    const tol = HANDLE_SIZE + 6;
+    const rect = canvas.getBoundingClientRect();
+    const scaleFactor = (rect && rect.width > 0) ? (canvas.width / rect.width) : 1;
+    const tol = Math.max(18, Math.ceil(24 * scaleFactor));
 
     const handles = {
       nw: Math.hypot(px - bx, py - by) < tol,
@@ -1937,6 +1989,10 @@ function setupCanvasEvents() {
     }
     return null;
   };
+
+  // Expose display-scale hit tolerance and handle size calculations for diagnostics and tests
+  window.getCanvasHitTolerance = (scaleFactor) => Math.max(18, Math.ceil(24 * scaleFactor));
+  window.getCanvasHandleSize = (scaleFactor) => Math.max(12, Math.ceil(14 * scaleFactor));
 
   const findHitBox = (px, py) => {
     const w = canvas.width;
@@ -1956,6 +2012,11 @@ function setupCanvasEvents() {
 
   // Pointer Down
   canvas.addEventListener('pointerdown', (e) => {
+    try {
+      if (canvas.setPointerCapture && e && e.pointerId !== undefined) {
+        canvas.setPointerCapture(e.pointerId);
+      }
+    } catch (err) {}
     const coords = getCanvasCoords(e);
     const px = coords.x;
     const py = coords.y;
@@ -2259,7 +2320,12 @@ function setupCanvasEvents() {
   });
 
   // Pointer Up / Leave
-  const handlePointerEnd = () => {
+  const handlePointerEnd = (e) => {
+    try {
+      if (canvas.releasePointerCapture && e && e.pointerId !== undefined && canvas.hasPointerCapture && canvas.hasPointerCapture(e.pointerId)) {
+        canvas.releasePointerCapture(e.pointerId);
+      }
+    } catch (err) {}
     if (state.crop.active) {
       state.crop.handle = null;
       return;
@@ -2334,7 +2400,7 @@ async function copyToClipboard() {
   }
 
   if (!navigator.clipboard || !window.ClipboardItem) {
-    alert('Tu navegador no admite copiar imágenes directamente al portapapeles. Usa el botón "Descargar".');
+    showToast('Tu navegador no admite copiar imágenes directamente al portapapeles. Usa el botón "Descargar".', 'warning');
     return;
   }
 
@@ -2348,13 +2414,18 @@ async function copyToClipboard() {
       ]);
       const prevText = btnCopyClipboard.textContent;
       btnCopyClipboard.textContent = '✓ ¡Copiado!';
+      const btnStep3Copy = document.getElementById('btn-step3-copy');
+      const prevStep3Text = btnStep3Copy ? btnStep3Copy.textContent : '';
+      if (btnStep3Copy) btnStep3Copy.textContent = '✓ ¡Copiado!';
+      showToast('✓ Imagen copiada al portapapeles', 'success');
       setTimeout(() => {
         btnCopyClipboard.textContent = prevText;
+        if (btnStep3Copy) btnStep3Copy.textContent = prevStep3Text;
       }, 2000);
     }, 'image/png');
   } catch (err) {
     console.error('Clipboard error:', err);
-    alert('No se pudo copiar al portapapeles. Usa el botón Descargar.');
+    showToast('No se pudo copiar al portapapeles. Usa el botón Descargar.', 'warning');
   } finally {
     render(false);
   }
@@ -2430,7 +2501,7 @@ function setupCrop() {
 
 function toggleCropMode() {
   if (!state.img) {
-    alert('Carga primero una imagen de DNI para recortar.');
+    showToast('Carga primero una foto de tu DNI para recortar.', 'info');
     return;
   }
   if (state.crop.active) {
@@ -2620,7 +2691,7 @@ function applyCrop() {
   const cropPxH = Math.round(r.height * curH);
 
   if (cropPxW < 20 || cropPxH < 20) {
-    alert('El área de recorte es demasiado pequeña.');
+    showToast('El área de recorte seleccionada es demasiado pequeña.', 'warning');
     return;
   }
 
@@ -2744,8 +2815,8 @@ const animationState = {
       }
     },
     {
-      title: "2. 100% On-Device: Nada sale de tu navegador",
-      text: "ProtegeDNI procesa tu foto <strong>enteramente en la memoria RAM</strong> de tu dispositivo mediante HTML5 Canvas. Ningún dato viaja a la nube ni a servidores. Además, se eliminan metadatos EXIF y GPS automáticamente.",
+      title: "2. 100% Privado: Nada sale de tu dispositivo",
+      text: "ProtegeDNI procesa tu foto <strong>en tu propio dispositivo</strong> mediante HTML5 Canvas. Ningún dato viaja a la nube ni a servidores. Además, se eliminan los datos de ubicación GPS y cámara automáticamente.",
       action: (card) => {
         card.classList.remove('grayscale-mode', 'rotated');
         card.querySelector('#anim-crop-frame').classList.add('hidden');
@@ -2758,7 +2829,7 @@ const animationState = {
     },
     {
       title: "3. Recortar y Rotar: Encuadre perfecto",
-      text: "Las fotos hechas con el móvil suelen tener bordes de la mesa y estar torcidas. Usa las herramientas de <strong>Giro 90°</strong>, <strong>Enderezar</strong> y el marco de <strong>Recorte con proporción oficial DNI (85.6 × 54 mm)</strong>.",
+      text: "Las fotos hechas con el móvil suelen tener bordes de la mesa y estar torcidas. Usa las herramientas de <strong>Giro 90°</strong>, <strong>Enderezar</strong> y el marco de <strong>Recorte con proporción oficial del DNI</strong>.",
       action: (card) => {
         card.classList.remove('grayscale-mode');
         card.classList.add('rotated');
@@ -2771,8 +2842,8 @@ const animationState = {
       }
     },
     {
-      title: "4. Censura AEPD: Ocultación de campos críticos",
-      text: "Aplica en 1 solo clic la recomendación de la <strong>AEPD y Policía Nacional</strong>: pixelado o bloqueo de la Firma manuscrita, Código CAN y Nº de Soporte / IDESP (o código MRZ en el reverso).",
+      title: "4. Protección AEPD: Ocultación de datos críticos",
+      text: "Aplica en 1 solo clic la recomendación de la <strong>AEPD y Policía Nacional</strong>: ocultación de la Firma manuscrita, Clave CAN y Nº de Soporte / IDESP (o líneas de lectura <<< en el reverso).",
       action: (card) => {
         card.classList.remove('grayscale-mode', 'rotated');
         card.querySelector('#anim-crop-frame').classList.add('hidden');
@@ -2785,8 +2856,8 @@ const animationState = {
       }
     },
     {
-      title: "5. Filtro Blanco y Negro: Neutraliza copias fraudulentas",
-      text: "Convierte el documento a escala de grises con contraste perceptual. Esto <strong>invalida la copia como documento original a color</strong> para altas bancarias o pasarelas de verificación KYC automatizadas.",
+      title: "5. Convertir a Blanco y Negro: Invalida copias fraudulentas",
+      text: "Convierte el documento a escala de grises recomendada por la Policía. Esto <strong>invalida la copia como documento original a color</strong> para verificación de identidad bancaria y financiera (KYC) fraudulenta.",
       action: (card) => {
         card.classList.add('grayscale-mode');
         card.classList.remove('rotated');
@@ -2855,7 +2926,7 @@ function setupAnimationModal() {
   if (btnAnimTryDemo) {
     btnAnimTryDemo.addEventListener('click', () => {
       closeAnimationModal();
-      loadDemoImage('Spanish_ID_card_(front_side).webp', 'front');
+      loadDemoSide('Spanish_ID_card_(front_side).webp', 'front');
     });
   }
 }
