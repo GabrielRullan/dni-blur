@@ -1336,6 +1336,8 @@ function openGuideModal(targetId) {
   guideModal.classList.remove('hidden');
   document.body.style.overflow = 'hidden';
 
+  const modalBody = guideModal.querySelector('.modal-body');
+
   // Highlight specific item if triggered from chip info
   document.querySelectorAll('.guide-item').forEach(item => item.classList.remove('highlighted'));
   if (targetId) {
@@ -1344,6 +1346,8 @@ function openGuideModal(targetId) {
       el.classList.add('highlighted');
       setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
     }
+  } else if (modalBody) {
+    modalBody.scrollTop = 0;
   }
 }
 
@@ -2935,6 +2939,8 @@ function openAnimationModal() {
   if (!animationModal) return;
   animationModal.classList.remove('hidden');
   document.body.style.overflow = 'hidden';
+  const modalBody = animationModal.querySelector('.modal-body');
+  if (modalBody) modalBody.scrollTop = 0;
   goToAnimStep(0);
   startAnimAutoPlay();
 }
