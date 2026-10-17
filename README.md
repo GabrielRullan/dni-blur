@@ -3,7 +3,8 @@
 
 Diseñado siguiendo las recomendaciones oficiales de seguridad de la **Agencia Española de Protección de Datos (AEPD)** y de la **Policía Nacional** para la cesión de copias del Documento Nacional de Identidad.
 
-🌐 **Demo online en Firebase:** [https://dni-blur.web.app](https://dni-blur.web.app) (o [https://dni-blur.firebaseapp.com](https://dni-blur.firebaseapp.com))
+🌐 **Demo online en Firebase Hosting:** [https://dni-blur.web.app](https://dni-blur.web.app) (o [https://dni-blur.firebaseapp.com](https://dni-blur.firebaseapp.com))  
+📦 **Repositorio en GitHub:** [https://github.com/GabrielRullan/dni-blur](https://github.com/GabrielRullan/dni-blur)
 
 ---
 
@@ -15,26 +16,26 @@ Diseñado siguiendo las recomendaciones oficiales de seguridad de la **Agencia E
 
 ---
 
-## ✨ Características principales
+## ✨ Características y Funcionalidades
 
-### 1. Ofuscación de datos sensibles
-- **3 Modos de ocultación:** Pixelado adaptativo, Desenfoque (Blur) y Bloque negro absoluto.
-- **Plantillas rápidas para DNI 3.0 y 4.0:**
-  - **Anverso:** Firma manuscrita, Código numérico CAN (6 dígitos), Nº de Soporte / IDESP, Fecha de validez, Fecha de nacimiento, Foto secundaria.
-  - **Reverso:** Código MRZ (3 líneas de lectura óptica inferior), Domicilio completo, Nombre de los padres, Lugar de nacimiento.
-  - **Botón de 1 clic AEPD:** Aplica de golpe la combinación crítica (*Firma + CAN + Nº Soporte*) para evitar trámites bancarios o suplantación en préstamos online.
-- **Edición manual interactiva:** Haz clic y arrastra sobre cualquier parte de la imagen para crear recuadros de censura personalizados; redimensiona y mueve los recuadros existentes con las guías interactivas.
+### 1. Modos de Uso: Fácil / Sencillo vs. Avanzado
+- **Modo Fácil (por defecto):** Flujo guiado en 3 pasos con lenguaje claro y ergonomía táctil móvil (*mobile-first*). Aplica por defecto **pixelado seguro**, convierte automáticamente a **blanco y negro** para invalidar copias a color y añade la **marca de agua de uso**. No satura al usuario con opciones técnicas innecesarias.
+- **Modo Avanzado:** Desbloquea ajustes finos:
+  - Estilos de ocultación: Pixelado, Desenfoque (Blur) o Bloque negro.
+  - Slider de intensidad de ocultación.
+  - Ajustes de Contraste y Brillo en el filtro B&W.
+  - Estilos de marca de agua (Mosaico, Sello, Franjas), opacidad, escala y colores (rojo, azul, negro, blanco).
 
-### 2. Filtro Blanco y Negro (B&W)
-- Convierte el documento a escala de grises perceptual (fórmula ITU-R BT.601).
-- Ajustes finos de **Contraste** y **Brillo**.
-- Invalida el uso del documento como copia en color para contrataciones de servicios financieros no autorizados.
+### 2. Ofuscación de Datos Sensibles con Toggle y Presets
+- **Comportamiento Toggle:** Hacer clic en un botón de zona (*Firma*, *CAN*, *Soporte*, etc.) lo activa/añade; hacer clic nuevamente lo elimina y desmarca visualmente (con indicador `✓`).
+- **Botón 1-Clic AEPD:** Aplica o retira de golpe los tres elementos críticos recomendados por la AEPD y la Policía Nacional (*Firma + Código CAN + Nº de Soporte*).
+- **Plantillas DNI (Anverso y Reverso):**
+  - **Anverso:** Firma manuscrita, Código CAN (6 dígitos), Nº de Soporte / IDESP, Fecha de validez, Fecha de nacimiento, Foto secundaria.
+  - **Reverso:** Código MRZ (3 líneas de lectura mecánica), Domicilio, Nombre de padres, Lugar de nacimiento.
+- **Edición Manual Interactiva:** Arrastra sobre la imagen para crear cajas de censura arbitrarias; selecciona cualquier caja para moverla, cambiar su tamaño con los tiradores de las esquinas o eliminarla (`Supr` / botón borrar).
 
-### 3. Marca de agua de finalidad (Watermark)
-- Permite especificar el destinatario o propósito exclusivo de la copia (ej: `USO EXCLUSIVO ALQUILER PISO`, `CHECK-IN HOTEL`, `CONTRATO LABORAL`).
-- Incorpora opcionalmente la fecha del día actual.
-- **3 Disposiciones:** Mosaico diagonal repetitivo, Sello cruzado central y Franjas superior/inferior.
-- Personalización de color (rojo seguridad, azul oficial, negro, blanco), opacidad y tamaño de fuente.
+### 3. Calibración por 2 Esquinas (Anchor Alignment)
+- Botón **🎯 Ajustar esquinas del DNI**: Permite tocar la esquina superior izquierda y la inferior derecha del documento en fotos tomadas con márgenes, fondos o perspectiva, recalculando y posicionando con precisión todas las plantillas.
 
 ### 4. Encuadre, Recorte y Giro Inteligente
 - **Recorte interactivo (Cropping):** Marco visual con regla de tercios y tiradores para eliminar el fondo de la mesa o bordes sobrantes.
@@ -53,20 +54,34 @@ Diseñado siguiendo las recomendaciones oficiales de seguridad de la **Agencia E
 - **Seguridad unificada:** Aplica el filtro en blanco y negro y la marca de agua cruzada con fecha sobre el folio unificado completo.
 - **Descarga directa:** Descarga en JPG o PNG un único archivo listo para enviar (`DNI_Completo_Anverso_y_Reverso_...`).
 
-### 6. Animación interactiva explicativa
-- **Tutorial animado en código web:** Simulación interactiva paso a paso accesible desde el botón superior o desde `animation.html` que ilustra los peligros de enviar un DNI sin proteger (préstamos online fraudulentos, suplantación) y enseña a usar la herramienta en 7 pasos clave.
+### 6. Guía Explicativa de Privacidad (Modal Mobile-First)
+- Botón **"¿Qué anonimizar?"** e iconos `ℹ️` junto a cada campo.
+- Explica de forma pedagógica y con niveles de riesgo (Crítico, Medio, Recomendado) por qué se debe proteger cada dato:
+  - *Nº de Soporte / IDESP:* Clave exigida por Hacienda, Seguridad Social y bancos para altas fraudulentas.
+  - *Firma Manuscrita:* Evita calcados o vectorización en contratos y créditos.
+  - *Código CAN:* Bloquea accesos no autorizados por NFC a los certificados del DNI electrónico.
+  - *Código MRZ:* Recuerda que el reverso repite en texto plano el DNI y el número de soporte.
+  - *Domicilio y Padres:* Protección física y de preguntas de seguridad bancarias.
 
-### 7. Exportación y compatibilidad
+### 7. Animación Interactiva Explicativa
+- **Tutorial animado en código web:** Simulación interactiva paso a paso accesible desde el botón superior o desde [`animation.html`](file:///c:/Users/gabri/Documents/anony/animation.html) que ilustra los peligros de enviar un DNI sin proteger (préstamos online fraudulentos, suplantación) y enseña a usar la herramienta en 7 pasos clave.
+
+### 8. Marca de Agua de Finalidad
+- Impide la reutilización de la copia para fines no autorizados (ej: `USO EXCLUSIVO ALQUILER DE VIVIENDA`, `CHECK-IN HOTEL`, `TRÁMITE BANCARIO`).
+- Fecha automática del día actual.
+- Disposiciones: Mosaico diagonal repetitivo, Sello central o Franjas.
+
+### 9. Exportación y Demos Integradas
 - Descarga en formatos **JPG** (ligero) o **PNG** (calidad nítida sin artefactos).
 - Botón **Copiar imagen** directo al portapapeles (`navigator.clipboard`).
 - Drag & Drop de fotos y opción de pegar imágenes con `Ctrl+V`.
-- DNI simulado sintético integrado para probar la herramienta de inmediato sin subir un documento real.
+- **Demos reales integradas:** Permite probar al instante con las muestras reales de anverso y reverso (documento espécimen de Carmen).
 
 ---
 
 ## 🚀 Despliegue en Firebase Hosting
 
-Para desplegar este proyecto en Firebase Hosting:
+Para desplegar actualizaciones en Firebase Hosting:
 
 ```bash
 # 1. Iniciar sesión en Firebase (si no lo estás)
@@ -76,15 +91,17 @@ firebase login
 firebase deploy --only hosting
 ```
 
-El proyecto incluye el archivo `firebase.json` configurado para servir la raíz del repositorio con cabeceras de seguridad web (`X-Frame-Options`, `X-Content-Type-Options`, `Content-Security-Policy`).
+El proyecto incluye:
+- `firebase.json`: Configurado con reglas de hosting y cabeceras de seguridad HTTP (`X-Frame-Options`, `X-Content-Type-Options`, `X-XSS-Protection`).
+- `.firebaserc`: Vinculado al proyecto `dni-blur`.
 
 ---
 
-## 🛠️ Tecnologías utilizadas
+## 🛠️ Tecnologías y Arquitectura
 
-- **HTML5 Canvas API:** Manipulación directa de pixeles en memoria del cliente.
-- **CSS3 Moderno:** Variables CSS, diseño responsive adaptable a escritorio y dispositivos móviles.
-- **JavaScript estándar (ES6+):** Sin dependencias de compilación ni librerías externas pesadas.
+- **Zero Dependencies / Vanilla Web:** Sin bundlers ni frameworks pesados (Vanilla JS ES6+, CSS3 moderno, HTML5 semántico).
+- **HTML5 Canvas 2D:** Procesado de imagen y manipulación de píxeles 100% en memoria en el dispositivo del usuario.
+- **Diseño Mobile-First:** Adaptado a pantallas táctiles de teléfonos móviles y escritorios.
 
 ---
 
