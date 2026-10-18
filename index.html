@@ -196,9 +196,12 @@
 
           <div class="tool-row calibration-trigger-row">
             <button type="button" id="btn-start-calibration" class="btn btn-outline-primary btn-full">
-              🎯 Marcar esquinas del DNI (Alinear plantilla)
+              🎯 Marcar esquinas del DNI (Encuadrar / Recortar)
             </button>
-            <p class="tool-micro-help">Si tu foto incluye fondo, mantel o bordes sobrantes, toca 2 esquinas para que las zonas de censura encajen a la perfección.</p>
+            <button type="button" id="btn-undo-crop-front" class="btn btn-ghost btn-sm btn-full hidden">
+              ↺ Restaurar foto original sin recortar
+            </button>
+            <p class="tool-micro-help">Marca 2 esquinas de tu DNI: te preguntaremos si deseas recortar el fondo sobrante y orientar la tarjeta automáticamente.</p>
           </div>
         </div>
       </div>
@@ -401,9 +404,12 @@
 
           <div class="tool-row calibration-trigger-row">
             <button type="button" id="btn-start-calibration-back" class="btn btn-outline-primary btn-full">
-              🎯 Marcar esquinas del reverso
+              🎯 Marcar esquinas del reverso (Encuadrar / Recortar)
             </button>
-            <p class="tool-micro-help">Alinea las líneas MRZ (&lt;&lt;&lt;) con el borde exacto de la tarjeta física.</p>
+            <button type="button" id="btn-undo-crop-back" class="btn btn-ghost btn-sm btn-full hidden">
+              ↺ Restaurar foto original sin recortar
+            </button>
+            <p class="tool-micro-help">Marca 2 esquinas del reverso para recortar el fondo y alinear las líneas MRZ (&lt;&lt;&lt;) con exactitud.</p>
           </div>
         </div>
       </div>
@@ -867,6 +873,34 @@
           Cerrar
         </button>
       </footer>
+    </div>
+  </div>
+
+  <!-- Crop & Rotate Confirmation Prompt Modal -->
+  <div id="crop-prompt-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="crop-prompt-title">
+    <div class="modal-container crop-prompt-dialog">
+      <header class="modal-header">
+        <div class="modal-title-wrap">
+          <span class="modal-badge">✂️ Esquinas Detectadas</span>
+          <h2 id="crop-prompt-title">¿Quieres recortar y orientar la foto?</h2>
+        </div>
+        <button type="button" id="btn-close-crop-prompt" class="btn-close-modal" aria-label="Cerrar">&times;</button>
+      </header>
+
+      <div class="modal-body">
+        <p class="crop-prompt-desc" id="crop-prompt-desc">
+          Hemos detectado el área marcada de tu DNI. Si aceptas, recortaremos el fondo sobrante y dejaremos la tarjeta perfectamente encuadrada y orientada en horizontal para que las plantillas encajen al milímetro.
+        </p>
+
+        <div class="crop-prompt-actions">
+          <button type="button" id="btn-confirm-crop-rotate" class="btn btn-primary btn-full btn-lg">
+            ✂️ Sí, recortar y orientar DNI
+          </button>
+          <button type="button" id="btn-keep-corners-only" class="btn btn-secondary btn-full">
+            🎯 No recortar (Solo usar esquinas para guiar plantillas)
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 

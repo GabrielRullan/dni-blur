@@ -1773,6 +1773,24 @@ body {
   background: #d95d39;
 }
 
+/* Crop Prompt Modal Dialog */
+.crop-prompt-dialog {
+  max-width: 440px;
+}
+
+.crop-prompt-desc {
+  font-size: 0.86rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.crop-prompt-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  margin-top: 0.4rem;
+}
+
 /* Animations */
 @keyframes fadeIn {
   from { opacity: 0; }

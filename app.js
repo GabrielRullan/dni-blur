@@ -44,11 +44,25 @@ document.addEventListener('DOMContentLoaded', () => {
   on('straighten-slider-back', 'input', e => window.CanvasEngine.setFineRotation('back', e.target.value));
   on('btn-reset-straighten-back', 'click', () => { const s = document.getElementById('straighten-slider-back'); if (s) s.value = 0; window.CanvasEngine.setFineRotation('back', 0); });
 
-  // Calibration
+  // Calibration & Crop Prompt
   on('btn-start-calibration', 'click', () => window.CanvasEngine.startCalibration());
   on('btn-start-calibration-back', 'click', () => window.CanvasEngine.startCalibration());
   on('btn-cancel-calib', 'click', () => window.CanvasEngine.cancelCalibration());
   on('btn-reset-calib', 'click', () => window.CanvasEngine.resetCalibration(window.state.currentSide));
+  on('btn-undo-crop-front', 'click', () => window.CanvasEngine.undoCornerCrop('front'));
+  on('btn-undo-crop-back', 'click', () => window.CanvasEngine.undoCornerCrop('back'));
+
+  const cropModal = document.getElementById('crop-prompt-modal');
+  on('btn-confirm-crop-rotate', 'click', () => {
+    cropModal?.classList.add('hidden');
+    window.CanvasEngine.applyCornerCropAndRotate(window.state.currentSide);
+  });
+  const keepCornersOnly = () => {
+    cropModal?.classList.add('hidden');
+    showToast('✓ Esquinas guardadas para alinear plantillas', 'success');
+  };
+  on('btn-keep-corners-only', 'click', keepCornersOnly);
+  on('btn-close-crop-prompt', 'click', keepCornersOnly);
 
   // Presets & Redactions
   document.querySelectorAll('[data-preset]').forEach(btn => btn.addEventListener('click', () => window.CanvasEngine.togglePreset(btn.dataset.preset)));

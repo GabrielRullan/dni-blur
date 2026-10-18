@@ -18,7 +18,11 @@ function mountCanvas(stepId) {
 }
 
 function finishImageLoad(img, side, src) {
-  window.state.sides[side].img = img; window.state.sides[side].skipped = false;
+  const s = window.state.sides[side];
+  s.img = img; s.originalImg = img; s.skipped = false;
+  s.imgOrientation = 0; s.fineRotation = 0;
+  s.calibration = { topLeft: null, bottomRight: null };
+  document.getElementById(`btn-undo-crop-${side}`)?.classList.add('hidden');
   const thumb = document.getElementById(`thumb-${side}-loaded`), prev = document.getElementById(`preview-${side}-loaded`);
   if (thumb) thumb.src = src; if (prev) prev.classList.remove('hidden');
   if (window.showToast) window.showToast(`✓ ${side === 'front' ? 'Anverso' : 'Reverso'} listo`, 'success');
@@ -71,6 +75,82 @@ function resetCalibration(side) {
   window.state.sides[side].calibration = { topLeft: null, bottomRight: null };
   cancelCalibration();
   if (window.showToast) window.showToast('Esquinas restablecidas.', 'info');
+}
+
+function applyCornerCropAndRotate(side) {
+  const s = window.state.sides[side];
+  if (!s.img || !s.calibration.topLeft || !s.calibration.bottomRight) return;
+  const canvas = document.getElementById('dni-canvas');
+  if (!canvas) return;
+
+  // Render clean oriented image without pins
+  const prevActive = window.state.calibration.active;
+  const savedCal = { ...s.calibration };
+  s.calibration = { topLeft: null, bottomRight: null };
+  window.state.calibration.active = false;
+  renderStepCanvas(window.state.wizardStep);
+
+  const x1 = Math.max(0, Math.round(Math.min(savedCal.topLeft.x, savedCal.bottomRight.x) * canvas.width));
+  const y1 = Math.max(0, Math.round(Math.min(savedCal.topLeft.y, savedCal.bottomRight.y) * canvas.height));
+  const x2 = Math.min(canvas.width, Math.round(Math.max(savedCal.topLeft.x, savedCal.bottomRight.x) * canvas.width));
+  const y2 = Math.min(canvas.height, Math.round(Math.max(savedCal.topLeft.y, savedCal.bottomRight.y) * canvas.height));
+  const cw = Math.max(20, x2 - x1), ch = Math.max(20, y2 - y1);
+
+  // If marked card is taller than wide (portrait), rotate 90° automatically so DNI is landscape
+  const needsAutoRotate = ch > cw * 1.08;
+  const outCanvas = document.createElement('canvas');
+  outCanvas.width = needsAutoRotate ? ch : cw;
+  outCanvas.height = needsAutoRotate ? cw : ch;
+  const octx = outCanvas.getContext('2d');
+
+  if (needsAutoRotate) {
+    octx.translate(outCanvas.width / 2, outCanvas.height / 2);
+    octx.rotate(-Math.PI / 2);
+    octx.drawImage(canvas, x1, y1, cw, ch, -cw / 2, -ch / 2, cw, ch);
+  } else {
+    octx.drawImage(canvas, x1, y1, cw, ch, 0, 0, cw, ch);
+  }
+
+  const croppedImg = new Image();
+  croppedImg.onload = () => {
+    if (!s.originalImg) s.originalImg = s.img;
+    s.img = croppedImg;
+    s.imgOrientation = 0;
+    s.fineRotation = 0;
+    s.calibration = { topLeft: null, bottomRight: null };
+    const slider = document.getElementById(side === 'front' ? 'straighten-slider' : 'straighten-slider-back');
+    if (slider) slider.value = 0;
+    const badge = document.getElementById(side === 'front' ? 'straighten-val' : 'straighten-val-back');
+    if (badge) badge.textContent = '0°';
+    document.getElementById(`btn-undo-crop-${side}`)?.classList.remove('hidden');
+
+    // Remap any existing preset boxes to full card bounds
+    s.boxes.forEach(b => {
+      if (b.presetKey) {
+        const def = (side === 'front' ? PRESETS_FRONT : PRESETS_BACK)[b.presetKey];
+        if (def) { b.x = def.x; b.y = def.y; b.width = def.width; b.height = def.height; }
+      }
+    });
+
+    renderStepCanvas(window.state.wizardStep);
+    if (window.showToast) {
+      window.showToast(needsAutoRotate ? '✂️ DNI recortado y orientado en horizontal' : '✂️ DNI recortado y encuadrado con éxito', 'success');
+    }
+  };
+  croppedImg.src = outCanvas.toDataURL('image/png');
+  window.state.calibration.active = prevActive;
+}
+
+function undoCornerCrop(side) {
+  const s = window.state.sides[side];
+  if (!s || !s.originalImg) return;
+  s.img = s.originalImg;
+  s.imgOrientation = 0;
+  s.fineRotation = 0;
+  s.calibration = { topLeft: null, bottomRight: null };
+  document.getElementById(`btn-undo-crop-${side}`)?.classList.add('hidden');
+  renderStepCanvas(window.state.wizardStep);
+  if (window.showToast) window.showToast('↺ Foto original restaurada', 'info');
 }
 
 function togglePreset(key) {
@@ -219,7 +299,20 @@ function initPointerEvents() {
       } else if (window.state.calibration.step === 2) {
         s.calibration.bottomRight = { x: Math.max(s.calibration.topLeft.x + 0.1, x), y: Math.max(s.calibration.topLeft.y + 0.1, y) };
         cancelCalibration();
-        if (window.showToast) window.showToast('✓ Esquinas guardadas con éxito', 'success');
+        const modal = document.getElementById('crop-prompt-modal');
+        if (modal) {
+          const cw = (s.calibration.bottomRight.x - s.calibration.topLeft.x) * canvas.width;
+          const ch = (s.calibration.bottomRight.y - s.calibration.topLeft.y) * canvas.height;
+          const desc = document.getElementById('crop-prompt-desc');
+          if (desc) {
+            desc.textContent = ch > cw * 1.08
+              ? 'Has marcado las esquinas de tu DNI (detectado en vertical). ¿Quieres recortar los bordes sobrantes y rotarlo automáticamente a horizontal?'
+              : 'Has marcado las esquinas de tu DNI. ¿Quieres recortar la foto para ajustar y encuadrar solo el documento?';
+          }
+          modal.classList.remove('hidden');
+        } else if (window.showToast) {
+          window.showToast('✓ Esquinas guardadas con éxito', 'success');
+        }
       }
       renderStepCanvas(window.state.wizardStep);
       return;
@@ -294,6 +387,6 @@ function initPointerEvents() {
 
 window.CanvasEngine = {
   mountCanvas, loadCardImage, loadDemoCard, rotateSide, setFineRotation,
-  startCalibration, cancelCalibration, resetCalibration, togglePreset,
-  applyAEPD, syncPresetChips, deleteSelectedBox, clearBoxes, renderStepCanvas, initPointerEvents
+  startCalibration, cancelCalibration, resetCalibration, applyCornerCropAndRotate, undoCornerCrop,
+  togglePreset, applyAEPD, syncPresetChips, deleteSelectedBox, clearBoxes, renderStepCanvas, initPointerEvents
 };

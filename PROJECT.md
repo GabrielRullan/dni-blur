@@ -58,8 +58,8 @@ ProtegeDNI is a 100% client-side privacy application that redacts sensitive pers
 ## Milestones
 | # | Name | Scope | Dependencies | Status |
 |---|------|-------|-------------|--------|
-| M1 | Guided Wizard & Engine Refactoring | Steps 1.1-1.3, 2.1-2.3, Final Export, remove advanced mode & sliders, safe defaults, Web Share | none | IN_PROGRESS |
-| M2 | Automated E2E Verification, Git Push & Firebase Deploy | Puppeteer test suite, zero console errors, origin/main push, Firebase hosting deployment | M1 | PLANNED |
+| M1 | Guided Wizard & Engine Refactoring | Steps 1.1-1.3, 2.1-2.3, Final Export, remove advanced mode & sliders, safe defaults, Web Share | none | DONE |
+| M2 | Automated E2E Verification, Git Push & Firebase Deploy | Puppeteer test suite, zero console errors, origin/main push, Firebase hosting deployment | M1 | DONE |
 
 ## Interface Contracts
 ### Wizard State & Navigation (`app.js`)
