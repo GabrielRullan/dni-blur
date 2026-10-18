@@ -141,7 +141,7 @@ function renderStepCanvas(stepId) {
 
   if (!s.img) {
     canvas.width = 600; canvas.height = 380;
-    ctx.fillStyle = '#0f172a'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#1c1917'; ctx.fillRect(0, 0, canvas.width, canvas.height);
     return;
   }
 
@@ -168,10 +168,10 @@ function renderStepCanvas(stepId) {
       octx.imageSmoothingEnabled = false; octx.drawImage(canvas, bx, by, bw, bh, 0, 0, sw, sh);
       ctx.save();
       ctx.imageSmoothingEnabled = false; ctx.drawImage(off, 0, 0, sw, sh, bx, by, bw, bh);
-      ctx.lineWidth = 2; ctx.strokeStyle = (b.id === window.state.selectedBoxId) ? '#2563eb' : 'rgba(220, 38, 38, 0.7)';
+      ctx.lineWidth = 2; ctx.strokeStyle = (b.id === window.state.selectedBoxId) ? '#d95d39' : 'rgba(217, 93, 57, 0.75)';
       ctx.strokeRect(bx, by, bw, bh);
       if (b.id === window.state.selectedBoxId) {
-        ctx.fillStyle = '#2563eb';
+        ctx.fillStyle = '#d95d39';
         [[bx, by], [bx + bw, by], [bx + bw, by + bh], [bx, by + bh]].forEach(([hx, hy]) => ctx.fillRect(hx - 5, hy - 5, 10, 10));
       }
       ctx.restore();
@@ -181,10 +181,10 @@ function renderStepCanvas(stepId) {
   if (['step-1-2', 'step-2-2'].includes(stepId) || window.state.calibration.active) {
     const cal = s.calibration;
     ctx.save();
-    if (cal.topLeft) drawPin(ctx, cal.topLeft.x * canvas.width, cal.topLeft.y * canvas.height, '#2563eb', '1: Sup. Izq');
-    if (cal.bottomRight) drawPin(ctx, cal.bottomRight.x * canvas.width, cal.bottomRight.y * canvas.height, '#059669', '2: Inf. Dcha');
+    if (cal.topLeft) drawPin(ctx, cal.topLeft.x * canvas.width, cal.topLeft.y * canvas.height, '#d95d39', '1: Sup. Izq');
+    if (cal.bottomRight) drawPin(ctx, cal.bottomRight.x * canvas.width, cal.bottomRight.y * canvas.height, '#0d9488', '2: Inf. Dcha');
     if (cal.topLeft && cal.bottomRight) {
-      ctx.strokeStyle = '#2563eb'; ctx.lineWidth = 3; ctx.setLineDash([8, 6]);
+      ctx.strokeStyle = '#d95d39'; ctx.lineWidth = 3; ctx.setLineDash([8, 6]);
       ctx.strokeRect(cal.topLeft.x * canvas.width, cal.topLeft.y * canvas.height, (cal.bottomRight.x - cal.topLeft.x) * canvas.width, (cal.bottomRight.y - cal.topLeft.y) * canvas.height);
     }
     ctx.restore();
